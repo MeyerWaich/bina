@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="manifest.json">
+<title>Bina</title>
+<style>
+  :root{--ink:#000;--paper:#fff;--bone:#F3F1EC;--mute:#767676;--rule:#E4E4E4;--safe-b:env(safe-area-inset-bottom)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{display:flex;flex-direction:column;overflow:hidden}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 12px;padding-top:calc(18px + env(safe-area-inset-top))}
+  .wordmark{font-size:13px;font-weight:600;letter-spacing:.42em}
+  .house{font-size:12px;color:var(--mute)}
+
+  nav{display:flex;gap:22px;padding:0 20px 12px;border-bottom:1px solid var(--rule)}
+  nav button{background:none;border:0;font:inherit;font-size:14px;color:var(--mute);padding:6px 0;border-bottom:1.5px solid transparent}
+  nav button[aria-selected=true]{color:var(--ink);border-color:var(--ink)}
+
+  main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  section{display:none;padding:16px 20px 24px}
+  section.on{display:block}
+
+  /* chat */
+  .msg{max-width:86%;margin:0 0 12px;font-size:16px;line-height:1.4}
+  .msg.me{margin-left:auto;background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:18px 18px 4px 18px}
+  .msg.bina{padding:2px 0}
+  .msg.bina::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);margin-right:10px;vertical-align:middle}
+  .typing{color:var(--mute);font-size:14px}
+  .card{background:var(--bone);padding:14px 16px;border-radius:12px;margin:8px 0 14px;font-size:14px}
+  .card b{display:block;margin-bottom:4px;font-weight:600}
+  .card pre{white-space:pre-wrap;font:12px/1.4 ui-monospace,Menlo,monospace;margin:8px 0;max-height:160px;overflow:auto}
+  .card .row{display:flex;gap:10px;margin-top:10px}
+  .card button{flex:1;font:inherit;font-size:14px;padding:10px;border-radius:10px;border:1px solid var(--ink);background:var(--paper)}
+  .card button.yes{background:var(--ink);color:var(--paper)}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
+  .chips button{white-space:nowrap;font:inherit;font-size:13px;padding:8px 14px;border-radius:999px;border:1px solid var(--rule);background:var(--paper)}
+
+  form{display:flex;gap:10px;padding:10px 16px calc(12px + var(--safe-b));border-top:1px solid var(--rule);background:var(--paper)}
+  input{flex:1;font:inherit;font-size:16px;padding:12px 16px;border:1px solid var(--rule);border-radius:999px;outline:none}
+  input:focus{border-color:var(--ink)}
+  form button{width:46px;height:46px;border-radius:50%;border:0;background:var(--ink);color:var(--paper);font-size:18px}
+
+  /* house */
+  .room{margin-bottom:22px}
+  .room h3{font-size:12px;font-weight:500;color:var(--mute);margin-bottom:8px}
+  .dev{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule);font-size:15px}
+  .dev .st{color:var(--mute);font-size:13px}
+  .dev .st.on{color:var(--ink);font-weight:500}
+
+  /* feed */
+  .item{padding:14px 0;border-bottom:1px solid var(--rule)}
+  .item .t{font-size:12px;color:var(--mute);margin-bottom:4px}
+  .item .q{font-size:14px;color:var(--mute)}
+  .item .a{font-size:15px;line-height:1.4;margin-top:4px;white-space:pre-wrap}
+  .brief{background:var(--bone);padding:16px;border-radius:12px;margin-bottom:16px;font-size:15px;line-height:1.5;white-space:pre-wrap}
+  .brief small{display:block;color:var(--mute);font-size:12px;margin-bottom:6px}
+  .empty{color:var(--mute);font-size:14px;padding:30px 0;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="wordmark">BINA</div>
+  <div class="house" id="houseName">Home</div>
+</header>
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-tab="chat">Chat</button>
+  <button role="tab" data-tab="house">House</button>
+  <button role="tab" data-tab="feed">Feed</button>
+</nav>
+<main>
+  <section id="chat" class="on">
+    <div class="chips" id="chips">
+      <button>What's on right now?</button>
+      <button>Movie night</button>
+      <button>I'm leaving</button>
+      <button>Good night</button>
+      <button>Who came to the door today?</button>
+    </div>
+    <div id="log"></div>
+  </section>
+  <section id="house"><div class="empty">Loading the house…</div></section>
+  <section id="feed"><div class="empty">Nothing yet.</div></section>
+</main>
+<form id="f" autocomplete="off">
+  <input id="in" placeholder="Tell Bina…" enterkeyhint="send">
+  <button type="submit" aria-label="Send">↑</button>
+</form>
+
+<script>
+const USER = localStorage.getItem("bina_user") || "owner";
+const H = { "Content-Type": "application/json", "X-Bina-User": USER };
+const $ = (s) => document.querySelector(s);
+const log = $("#log");
+
+// tabs
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === b.dataset.tab));
+  if (b.dataset.tab === "house") loadHouse();
+  if (b.dataset.tab === "feed") loadFeed();
+});
+
+function add(cls, text) {
+  const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; log.appendChild(d);
+  d.scrollIntoView({ block: "end" }); return d;
+}
+
+function confirmCard(c) {
+  const d = document.createElement("div"); d.className = "card";
+  const what = c.kind === "service" ? `${c.domain}.${c.service} on ${c.entity_ids.join(", ")}` : c.summary;
+  d.innerHTML = `<b>${c.kind === "service" ? "Confirm this action?" : "Add this routine?"}</b>${what}${c.yaml ? `<pre>${c.yaml.replace(/</g, "&lt;")}</pre>` : ""}<div class="row"><button class="no">Cancel</button><button class="yes">Confirm</button></div>`;
+  const send = async (approve) => {
+    d.querySelectorAll("button").forEach(b => b.disabled = true);
+    const r = await fetch(`api/confirm/${c.id}`, { method: "POST", headers: H, body: JSON.stringify({ approve }) }).then(r => r.json());
+    d.remove(); add("bina", r.reply || r.error || "Done.");
+  };
+  d.querySelector(".yes").onclick = () => send(true);
+  d.querySelector(".no").onclick = () => send(false);
+  log.appendChild(d); d.scrollIntoView({ block: "end" });
+}
+
+async function send(text) {
+  if (!text.trim()) return;
+  add("me", text); $("#in").value = "";
+  const t = add("bina typing", "…");
+  try {
+    const r = await fetch("api/chat", { method: "POST", headers: H, body: JSON.stringify({ text }) }).then(r => r.json());
+    t.remove(); if (r.reply) add("bina", r.reply); (r.confirmations || []).forEach(confirmCard);
+  } catch (e) { t.textContent = "Bina is offline. Check the hub."; t.classList.remove("typing"); }
+}
+$("#f").onsubmit = (e) => { e.preventDefault(); send($("#in").value); };
+$("#chips").querySelectorAll("button").forEach(b => b.onclick = () => send(b.textContent));
+
+const nice = (id) => id.split(".")[1].replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+async function loadHouse() {
+  const h = await fetch("api/house").then(r => r.json()).catch(() => null);
+  const el = $("#house"); if (!h) return el.innerHTML = '<div class="empty">Hub unreachable.</div>';
+  el.innerHTML = h.rooms.map(r => `<div class="room"><h3>${r.room}</h3>${r.devices.map(d => {
+    const [id, st] = d.split("="); const on = !/^(off|closed|locked|unavailable|idle|standby|disarmed)/.test(st);
+    return `<div class="dev"><span>${nice(id)}</span><span class="st ${on ? "on" : ""}">${st}</span></div>`;
+  }).join("")}</div>`).join("") || '<div class="empty">No rooms yet. Assign devices to areas in Home Assistant.</div>';
+}
+async function loadFeed() {
+  const f = await fetch("api/feed").then(r => r.json()).catch(() => []);
+  const el = $("#feed");
+  const briefBtn = `<button class="chips-btn" id="briefBtn" style="font:inherit;font-size:13px;padding:8px 14px;border-radius:999px;border:1px solid #000;background:#fff;margin-bottom:14px">Morning brief now</button>`;
+  el.innerHTML = briefBtn + (f.length ? f.map(i => `<div class="item"><div class="t">${new Date(i.t).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })} · ${i.who}</div><div class="q">${i.text}</div><div class="a">${i.reply}</div></div>`).join("") : '<div class="empty">Nothing yet.</div>');
+  $("#briefBtn").onclick = async () => { $("#briefBtn").textContent = "Writing…"; const r = await fetch("api/brief", { headers: H }).then(r => r.json()); el.insertAdjacentHTML("afterbegin", `<div class="brief"><small>Morning brief</small>${r.brief || r.error}</div>`); $("#briefBtn").textContent = "Morning brief now"; };
+}
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+add("bina", "Hi. What would you like the house to do?");
+</script>
+</body>
+</html>

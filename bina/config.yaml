@@ -1,0 +1,28 @@
+name: Bina
+version: "0.1.0"
+slug: bina
+description: AI concierge for your home. Chat with the house, get the morning brief.
+url: https://mysmartcasa.com/bina
+arch: [aarch64, amd64]
+init: false
+homeassistant_api: true
+ingress: true
+ingress_port: 8787
+panel_icon: mdi:home-heart
+panel_title: Bina
+options:
+  anthropic_api_key: ""
+  model: claude-sonnet-4-6
+  house_name: "My Home"
+  timezone: America/New_York
+  owner_name: "Owner"
+  language: en
+  protected_entities: []
+schema:
+  anthropic_api_key: password
+  model: str
+  house_name: str
+  timezone: str
+  owner_name: str
+  language: list(en|es|he)
+  protected_entities: [str]

@@ -37,18 +37,25 @@ async function snapshot() {
 }
 
 const INTERESTING = ["light", "switch", "media_player", "climate", "cover", "lock", "alarm_control_panel", "binary_sensor", "camera", "scene", "fan"];
+const PRIORITY = { alarm_control_panel: 0, lock: 1, binary_sensor: 2, climate: 3, light: 4, cover: 5, media_player: 6, camera: 7, switch: 8, fan: 9, scene: 10 };
+const skip = (s) => s.state === "unavailable" || (s.attributes?.device_class || "").match(/^(update|connectivity|battery|problem|tamper)$/) || /siren|motion_detection|_info$/.test(s.entity_id);
+function line(s) {
+  const at = s.attributes || {};
+  const name = at.friendly_name ? ` (${at.friendly_name})` : "";
+  const extra = at.brightness ? ` ${Math.round(at.brightness / 2.55)}%` : at.temperature ? ` set ${at.temperature}` : at.current_position != null ? ` ${at.current_position}%` : at.media_title ? ` "${at.media_title}"` : at.device_class ? ` [${at.device_class}]` : "";
+  return `${s.entity_id}${name}=${s.state}${extra}`;
+}
 function compactHouse({ states, areas }) {
   const byArea = areas.map(a => ({
     room: a.name,
-    devices: a.entities.filter(id => INTERESTING.includes(id.split(".")[0]) && states[id]).map(id => {
-      const s = states[id]; const at = s.attributes || {};
-      const extra = at.brightness ? ` ${Math.round(at.brightness / 2.55)}%` : at.temperature ? ` set ${at.temperature}` : at.current_position != null ? ` ${at.current_position}%` : at.media_title ? ` "${at.media_title}"` : "";
-      return `${id}=${s.state}${extra}`;
-    })
+    devices: a.entities.filter(id => INTERESTING.includes(id.split(".")[0]) && states[id] && !skip(states[id])).map(id => line(states[id]))
   })).filter(a => a.devices.length);
   const assigned = new Set(areas.flatMap(a => a.entities));
-  const loose = Object.values(states).filter(s => INTERESTING.includes(s.entity_id.split(".")[0]) && !assigned.has(s.entity_id)).map(s => `${s.entity_id}=${s.state}`);
-  return { rooms: byArea, unassigned: loose.slice(0, 40) };
+  const loose = Object.values(states)
+    .filter(s => INTERESTING.includes(s.entity_id.split(".")[0]) && !assigned.has(s.entity_id) && !skip(s))
+    .sort((a, b) => (PRIORITY[a.entity_id.split(".")[0]] ?? 99) - (PRIORITY[b.entity_id.split(".")[0]] ?? 99))
+    .map(line);
+  return { rooms: byArea, unassigned: loose.slice(0, 200) };
 }
 
 // ---------- prompt ----------
@@ -63,6 +70,7 @@ Rules:
 - Locks, alarm and garage are protected: the system will ask the user to confirm; tell them you're asking.
 - Cameras are read only.
 - Use room names, not entity ids, when talking to the user.
+- Contact sensors (binary_sensor with device_class door/window/opening) tell you if doors and sliders are open. Motion sensors tell you presence.
 - Quiet hours ${house.quiet_hours.start} to ${house.quiet_hours.end}: keep audio low unless asked.
 - Preferences: ${house.preferences.join(" | ")}
 - Memory: ${house.memory.join(" | ") || "none yet"}

@@ -1,6 +1,7 @@
 #!/usr/bin/with-contenv bashio
 export ANTHROPIC_API_KEY="$(bashio::config 'anthropic_api_key')"
 export BINA_MODEL="$(bashio::config 'model')"
+export BINA_BRIEF_TIME="$(bashio::config 'brief_time')"
 export HA_URL="http://supervisor/core"
 export HA_TOKEN="${SUPERVISOR_TOKEN}"
 export BINA_PORT=8787
@@ -11,6 +12,12 @@ if [ ! -f /data/house.json ]; then
     const o=JSON.parse(require("fs").readFileSync("/data/options.json","utf8"));
     const h={name:o.house_name,timezone:o.timezone,residents:[{id:"owner",name:o.owner_name,role:"owner",language:o.language,brief:true}],protected:o.protected_entities||[],quiet_hours:{start:"23:00",end:"07:00"},preferences:[],memory:[]};
     require("fs").writeFileSync("/data/house.json",JSON.stringify(h,null,2));'
+else
+  node -e '
+    const fs=require("fs"); const o=JSON.parse(fs.readFileSync("/data/options.json","utf8")); const h=JSON.parse(fs.readFileSync("/data/house.json","utf8"));
+    h.name=o.house_name; h.timezone=o.timezone; h.protected=o.protected_entities||[];
+    const r=h.residents.find(x=>x.id==="owner"); if(r){ r.name=o.owner_name; r.language=o.language; }
+    fs.writeFileSync("/data/house.json",JSON.stringify(h,null,2));'
 fi
 bashio::log.info "Starting Bina for $(bashio::config 'house_name')"
 cd /opt/bina/server && exec node server.js

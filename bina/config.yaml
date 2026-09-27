@@ -1,7 +1,7 @@
 name: Bina
-version: "0.1.2"
+version: "0.2.0"
 slug: bina
-description: AI concierge for your home. Chat with the house, get the morning brief.
+description: AI concierge for your home. Chat or talk to the house, get the morning brief.
 url: https://mysmartcasa.com/bina
 arch: [aarch64, amd64]
 init: false
@@ -17,6 +17,7 @@ options:
   timezone: America/New_York
   owner_name: "Owner"
   language: en
+  brief_time: "07:30"
   protected_entities: []
 schema:
   anthropic_api_key: password
@@ -25,4 +26,5 @@ schema:
   timezone: str
   owner_name: str
   language: list(en|es|he)
+  brief_time: str
   protected_entities: [str]

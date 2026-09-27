@@ -1,14 +1,12 @@
 // Decides what Bina may do without asking.
-const AUTO = new Set(["light", "switch", "media_player", "climate", "cover", "scene", "script", "input_boolean", "fan", "select", "number"]);
+const AUTO = new Set(["light", "switch", "media_player", "climate", "cover", "scene", "script", "input_boolean", "fan", "select", "number", "homeassistant"]);
 const CONFIRM = new Set(["lock", "alarm_control_panel"]);
 const READ_ONLY = new Set(["camera", "sensor", "binary_sensor", "device_tracker", "person"]);
 
-export function classify({ domain, entityIds = [], house, states }) {
+export function classify({ domain, service, entityIds = [], house, states }) {
+  if (domain === "homeassistant" && service !== "update_entity") return "deny";
   if (entityIds.some(id => house.protected.includes(id))) return "confirm";
-  if (domain === "cover") {
-    const garage = entityIds.some(id => (states[id]?.attributes?.device_class || "") === "garage");
-    if (garage) return "confirm";
-  }
+  if (domain === "cover" && entityIds.some(id => (states[id]?.attributes?.device_class || "") === "garage")) return "confirm";
   if (CONFIRM.has(domain)) return "confirm";
   if (READ_ONLY.has(domain)) return "deny";
   if (AUTO.has(domain)) return "auto";

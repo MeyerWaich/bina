@@ -38,6 +38,8 @@ export const ha = {
     if (!r.ok) throw new Error(`snapshot ${r.status}`);
     return Buffer.from(await r.arrayBuffer()).toString("base64");
   },
+  // local Home Assistant Assist pipeline: fast path for simple commands
+  conversation: (text, language) => req("/api/conversation/process", { method: "POST", body: JSON.stringify({ text, language, agent_id: "conversation.home_assistant" }) }),
   saveAutomation: (id, config) => req(`/api/config/automation/config/${id}`, { method: "POST", body: JSON.stringify(config) }),
   // registries
   areas: () => wsCall("config/area_registry/list"),

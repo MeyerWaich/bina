@@ -7,29 +7,42 @@ import Anthropic from "@anthropic-ai/sdk";
 import { ha } from "./ha.js";
 import { tools } from "./tools.js";
 import { classify, roleAllows } from "./policy.js";
+import { icons } from "./icons.js";
 
+const VERSION = "0.3.0";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOUSE_PATH = process.env.BINA_HOUSE || "./house.json";
 const MODEL = process.env.BINA_MODEL || "claude-sonnet-4-6";
 const PORT = Number(process.env.BINA_PORT || 8787);
 const DATA = process.env.BINA_DATA || ".";
 const BRIEF_TIME = process.env.BINA_BRIEF_TIME || "07:30";
+const ALERT_URL = process.env.BINA_ALERT_URL || "";          // e.g. https://ntfy.sh/your-topic (integrator alerts)
+const DOORBELL_ALERTS = process.env.BINA_DOORBELL !== "false";
+const SNAP_DIR = path.join(DATA, "snaps");
+fs.mkdirSync(SNAP_DIR, { recursive: true });
 
 const anthropic = new Anthropic();
 const app = express();
 app.use(express.json({ limit: "2mb" }));
+for (const [n, b64] of Object.entries(icons)) app.get("/" + n, (_q, r) => r.type("png").set("Cache-Control", "max-age=604800").send(Buffer.from(b64, "base64")));
 app.use(express.static(path.join(__dirname, "..", "app")));
+app.use("/snaps", express.static(SNAP_DIR, { maxAge: "7d" }));
 
 // ---------- persistent state ----------
+const readJson = (p, d) => { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return d; } };
 const house = JSON.parse(fs.readFileSync(HOUSE_PATH, "utf8"));
-house.memory ||= []; house.preferences ||= []; house.protected ||= [];
+house.memory ||= []; house.preferences ||= []; house.protected ||= []; house.scenes ||= [];
 const saveHouse = () => fs.writeFileSync(HOUSE_PATH, JSON.stringify(house, null, 2));
-const FEED_PATH = path.join(DATA, "feed.json");
-let feed = []; try { feed = JSON.parse(fs.readFileSync(FEED_PATH, "utf8")); } catch {}
+const FEED_PATH = path.join(DATA, "feed.json"), EVENTS_PATH = path.join(DATA, "events.json"), ALERTS_PATH = path.join(DATA, "alerts.json");
+let feed = readJson(FEED_PATH, []), events = readJson(EVENTS_PATH, []), alerts = readJson(ALERTS_PATH, []);
 const pushFeed = (item) => { feed.unshift(item); feed = feed.slice(0, 200); fs.writeFile(FEED_PATH, JSON.stringify(feed), () => {}); };
+const pushEvent = (item) => { events.unshift(item); events = events.slice(0, 150); fs.writeFile(EVENTS_PATH, JSON.stringify(events), () => {}); };
+const pushAlert = (item) => { alerts.unshift(item); alerts = alerts.slice(0, 100); fs.writeFile(ALERTS_PATH, JSON.stringify(alerts), () => {}); };
 const audit = (entry) => fs.appendFileSync(path.join(DATA, "audit.log"), JSON.stringify({ t: new Date().toISOString(), ...entry }) + "\n");
-const sessions = new Map();       // userId -> message history
-const pending = new Map();        // confirmId -> { userId, call }
+const sessions = new Map();
+const pending = new Map();
+const owner = () => house.residents.find(r => r.role === "owner") || house.residents[0];
+const es = () => owner().language === "es";
 
 // ---------- house model ----------
 let reg = { at: 0, areas: [], entities: [], devices: [], exposed: {} };
@@ -43,7 +56,7 @@ async function registries() {
 }
 let stateCache = { at: 0, states: {} };
 async function states() {
-  if (Date.now() - stateCache.at < 4000) return stateCache.states;
+  if (Date.now() - stateCache.at < 3000) return stateCache.states;
   const list = await ha.states();
   stateCache = { at: Date.now(), states: Object.fromEntries(list.map(s => [s.entity_id, s])) };
   return stateCache.states;
@@ -52,41 +65,79 @@ async function states() {
 const INTERESTING = ["light", "switch", "media_player", "climate", "cover", "lock", "alarm_control_panel", "binary_sensor", "camera", "scene", "fan", "script"];
 const PRIORITY = { alarm_control_panel: 0, lock: 1, binary_sensor: 2, climate: 3, light: 4, cover: 5, media_player: 6, camera: 7, switch: 8, fan: 9, scene: 10, script: 11 };
 const noisy = (s) => s.state === "unavailable" || /^(update|connectivity|battery|problem|tamper)$/.test(s.attributes?.device_class || "") || /siren|motion_detection|_info$/.test(s.entity_id);
+const dom = (id) => id.split(".")[0];
+const fname = (s) => s?.attributes?.friendly_name || s?.entity_id?.split(".")[1].replace(/_/g, " ");
+
+// exposed entities with their room
+async function exposedEntities({ includeNoisy = false } = {}) {
+  const [r, st] = await Promise.all([registries(), states()]);
+  const exposedIds = new Set(Object.entries(r.exposed).filter(([, v]) => v?.conversation).map(([k]) => k));
+  const useExposure = exposedIds.size > 0;
+  const devArea = new Map(r.devices.map(d => [d.id, d.area_id]));
+  const entReg = new Map(r.entities.map(e => [e.entity_id, e]));
+  const areaName = new Map(r.areas.map(a => [a.area_id, a.name]));
+  const out = [];
+  for (const s of Object.values(st)) {
+    if (!INTERESTING.includes(dom(s.entity_id))) continue;
+    if (!includeNoisy && noisy(s)) continue;
+    if (useExposure && !exposedIds.has(s.entity_id)) continue;
+    const e = entReg.get(s.entity_id);
+    const a = e ? (e.area_id || devArea.get(e.device_id)) : null;
+    out.push({ s, room: a && areaName.has(a) ? areaName.get(a) : null });
+  }
+  return out;
+}
 function line(s) {
   const at = s.attributes || {};
   const name = at.friendly_name ? ` (${at.friendly_name})` : "";
   const extra = at.brightness ? ` ${Math.round(at.brightness / 2.55)}%` : at.temperature != null ? ` set ${at.temperature}, now ${at.current_temperature ?? "?"}` : at.current_position != null ? ` ${at.current_position}%` : at.media_title ? ` "${at.media_title}"` : at.volume_level != null ? ` vol ${Math.round(at.volume_level * 100)}%` : at.device_class ? ` [${at.device_class}]` : "";
   return `${s.entity_id}${name}=${s.state}${extra}`;
 }
+const sortP = (x, y) => (PRIORITY[dom(x.entity_id)] ?? 99) - (PRIORITY[dom(y.entity_id)] ?? 99);
 async function houseModel() {
-  const [r, st] = await Promise.all([registries(), states()]);
-  const exposedIds = new Set(Object.entries(r.exposed).filter(([, v]) => v?.conversation).map(([k]) => k));
-  const useExposure = exposedIds.size > 0;
-  const areaOf = new Map(); // entity_id -> area_id
-  const devArea = new Map(r.devices.map(d => [d.id, d.area_id]));
-  for (const e of r.entities) areaOf.set(e.entity_id, e.area_id || devArea.get(e.device_id) || null);
-  const areaName = new Map(r.areas.map(a => [a.area_id, a.name]));
+  const list = await exposedEntities();
   const rooms = new Map(); const loose = [];
-  for (const s of Object.values(st)) {
-    const dom = s.entity_id.split(".")[0];
-    if (!INTERESTING.includes(dom) || noisy(s)) continue;
-    if (useExposure && !exposedIds.has(s.entity_id)) continue;
-    const a = areaOf.get(s.entity_id);
-    if (a && areaName.has(a)) { if (!rooms.has(a)) rooms.set(a, []); rooms.get(a).push(s); } else loose.push(s);
-  }
-  const sortP = (x, y) => (PRIORITY[x.entity_id.split(".")[0]] ?? 99) - (PRIORITY[y.entity_id.split(".")[0]] ?? 99);
+  for (const { s, room } of list) { if (room) { if (!rooms.has(room)) rooms.set(room, []); rooms.get(room).push(s); } else loose.push(s); }
   return {
-    rooms: [...rooms.entries()].map(([a, list]) => ({ room: areaName.get(a), devices: list.sort(sortP).map(line) })),
-    unassigned: loose.sort(sortP).map(line)
+    rooms: [...rooms.entries()].map(([room, l]) => ({ room, devices: l.sort(sortP).map(line) })),
+    unassigned: loose.sort(sortP).map(line),
+    scenes: house.scenes.map(s => s.name)
   };
 }
 async function findPlayer(room) {
-  const m = await houseModel();
-  const want = room.toLowerCase();
-  const inRoom = m.rooms.find(r => r.room.toLowerCase() === want || r.room.toLowerCase().includes(want) || want.includes(r.room.toLowerCase()));
-  const pick = (lines) => (lines || []).map(l => l.split("=")[0].split(" ")[0]).find(id => id.startsWith("media_player."));
-  return pick(inRoom?.devices) || pick(m.unassigned.filter(l => l.toLowerCase().includes(want)));
+  const list = (await exposedEntities()).filter(x => dom(x.s.entity_id) === "media_player" && !/tv|tele/i.test(fname(x.s)));
+  const want = norm(room);
+  const hit = list.find(x => x.room && (norm(x.room) === want || norm(x.room).includes(want) || want.includes(norm(x.room))))
+    || list.find(x => norm(fname(x.s)).includes(want));
+  return hit?.s.entity_id;
 }
+
+// ---------- text helpers ----------
+const norm = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[¿?¡!.,;:]/g, " ").replace(/\s+/g, " ").trim();
+function findScene(text) {
+  const n = norm(text).replace(/^(bina )?(activa |pon |modo |escena |scene |run |start |activate )+/, "").replace(/^(el |la |los |las |the )/, "");
+  return house.scenes.find(s => { const k = norm(s.name).replace(/^modo /, ""); return n === k || n === "modo " + k || (n.endsWith(k) && n.length <= k.length + 8); });
+}
+
+// ---------- scenes ----------
+async function runScene(scene, user) {
+  const confirmations = []; const done = []; const failed = [];
+  for (const a of scene.actions || []) {
+    try {
+      if (a.music) { await runTool("play_music", a.music, user, {}); done.push("music"); continue; }
+      const st = await states();
+      const decision = classify({ domain: a.domain, service: a.service, entityIds: a.entity_ids || [], house, states: st });
+      if (decision === "deny" || !roleAllows(user.role, decision)) { failed.push(a.domain); continue; }
+      if (decision === "confirm") { const id = newId(); const call = { kind: "service", ...a }; pending.set(id, { userId: user.id, call }); confirmations.push({ id, ...call }); continue; }
+      await ha.call(a.domain, a.service, { entity_id: a.entity_ids, ...(a.data || {}) });
+      done.push(a.domain);
+    } catch (e) { failed.push(`${a.domain}: ${e.message.slice(0, 80)}`); }
+  }
+  stateCache.at = 0;
+  audit({ user: user.id, action: "scene", name: scene.name, done: done.length, failed });
+  return { done, failed, confirmations };
+}
+const newId = () => Math.random().toString(36).slice(2, 10);
 
 // ---------- prompt ----------
 function systemPrompt(user) {
@@ -96,36 +147,71 @@ function systemPrompt(user) {
 Rules:
 - Act, then confirm in one short line. Plain text only: no markdown, no asterisks, no bullet lists, no headers, no emojis.
 - When a request implies several devices, do them all in one turn. Use play_music for anything musical.
+- "Lo mismo aqui / play this in the kitchen too": join the target speaker to the one already playing with media_player.join.
 - Never claim something happened unless a tool succeeded. If a tool fails, say what failed.
 - Locks, alarm and garage are protected: the system asks the user to confirm; tell them you're asking. After a lock or alarm change, status can take a minute to update; say so if asked right away.
-- Cameras are read only. Contact sensors (device_class door/window/opening) say whether doors and sliders are open. Motion sensors say presence.
+- Cameras are read only. Use describe_camera when asked what is happening at a camera; the picture is shown to the user automatically.
+- Contact sensors (device_class door/window/opening) say whether doors and sliders are open. Motion sensors say presence.
 - Use room names, not entity ids, when talking to the user.
-- If the user defines a mode or scene in words, save it with remember, then execute it when they name it later.
+- When the user defines a mode or scene in words, save it with save_scene (it becomes a button on the home screen), then run it.
 - If the user describes a routine ("when X, do Y"), build it with create_automation.
 - Quiet hours ${house.quiet_hours.start} to ${house.quiet_hours.end}: keep audio low unless asked.
+- Saved scenes: ${house.scenes.map(s => s.name).join(", ") || "none"}
 - Preferences: ${house.preferences.join(" | ") || "none"}
 - Memory: ${house.memory.join(" | ") || "none yet"}
 - Now: ${now}. User: ${user.name} (${user.role}).`;
 }
 
+// ---------- cameras ----------
+async function snapshotFile(entityId, tag = "snap") {
+  const b64 = await ha.snapshot(entityId);
+  const file = `${Date.now()}-${tag}.jpg`;
+  fs.writeFileSync(path.join(SNAP_DIR, file), Buffer.from(b64, "base64"));
+  pruneSnaps();
+  return { b64, url: `snaps/${file}` };
+}
+function pruneSnaps() {
+  try {
+    const files = fs.readdirSync(SNAP_DIR).sort();
+    for (const f of files.slice(0, Math.max(0, files.length - 300))) fs.unlinkSync(path.join(SNAP_DIR, f));
+  } catch {}
+}
+async function describeImage(b64, lang) {
+  const r = await anthropic.messages.create({
+    model: MODEL, max_tokens: 120,
+    messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } }, { type: "text", text: `One short sentence in ${lang === "es" ? "Spanish" : lang === "he" ? "Hebrew" : "English"}: who or what is here and what are they doing (delivery, visitor, car, animal). Say nothing notable if empty. No names.` }] }]
+  });
+  return r.content.find(c => c.type === "text")?.text?.trim() || "";
+}
+
 // ---------- tool execution ----------
-async function runTool(name, input, user) {
+async function runTool(name, input, user, ctx) {
   switch (name) {
     case "get_house": return houseModel();
     case "get_state": return (await states())[input.entity_id] || { error: "unknown entity" };
     case "get_events": {
       const rows = await ha.logbook(input.hours || 24);
-      return rows.slice(-80).map(r => `${r.when?.slice(11, 16)} ${r.name}: ${r.message || r.state}`);
+      const cam = events.filter(e => e.t > Date.now() - (input.hours || 24) * 3600e3).map(e => `${new Date(e.t).toLocaleTimeString("en-US", { timeZone: house.timezone, hour: "numeric", minute: "2-digit" })} ${e.title}: ${e.text}`);
+      return [...cam, ...rows.slice(-80).map(r => `${r.when?.slice(11, 16)}Z ${r.name}: ${r.message || r.state}`)];
     }
     case "describe_camera": {
-      const b64 = await ha.snapshot(input.entity_id);
-      const r = await anthropic.messages.create({
-        model: MODEL, max_tokens: 120,
-        messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } }, { type: "text", text: `One sentence in ${user.language}: who or what is here and what are they doing. Say nothing notable if empty.` }] }]
-      });
-      return r.content.find(c => c.type === "text")?.text || "no description";
+      const snap = await snapshotFile(input.entity_id, "ask");
+      ctx.images?.push(snap.url);
+      return { description: await describeImage(snap.b64, user.language), shown_to_user: true };
     }
     case "remember": house.memory.push(input.fact); saveHouse(); return "saved";
+    case "save_scene": {
+      const scene = { id: norm(input.name).replace(/\s+/g, "-") || newId(), name: input.name, actions: input.actions || [] };
+      house.scenes = house.scenes.filter(s => norm(s.name) !== norm(scene.name)); house.scenes.push(scene); saveHouse();
+      return { saved: true, note: "It is now a button on the home screen." };
+    }
+    case "run_scene": {
+      const sc = findScene(input.name) || house.scenes.find(s => norm(s.name).includes(norm(input.name)));
+      if (!sc) return { error: "no scene with that name" };
+      const r = await runScene(sc, user);
+      ctx.confirmations?.push(...r.confirmations);
+      return { done: r.done.length, failed: r.failed, waiting_confirmation: r.confirmations.length };
+    }
     case "diagnose": {
       const s = (await states())[input.entity_id];
       if (!s) return { error: "unknown entity" };
@@ -156,11 +242,37 @@ async function runTool(name, input, user) {
   }
 }
 
+// ---------- fast path: scenes and simple commands without the AI ----------
+const PROTECTED_WORDS = /(cerradura|candado|\block|unlock|desbloq|bloque|alarma|alarm|garage|garaje|porton|puerta|door|gate|camara|camera|timbre)/;
+const NOT_SIMPLE = /(^| )(que|cual|cuales|hay|como|cuando|quien|donde|por que|is|are|what|which|who|when|how|why|did|was|y|and|despues|luego|si|if|pon|play|toca|reproduce|musica|music|cancion|song|recuerda|remember|crea|create|siempre|every|cada)( |$)/;
+async function fastPath(user, text) {
+  const sc = findScene(text);
+  if (sc) {
+    const r = await runScene(sc, user);
+    const reply = r.failed.length ? (es() ? `${sc.name}: listo, menos ${r.failed.join(", ")}.` : `${sc.name}: done, except ${r.failed.join(", ")}.`) : (es() ? `${sc.name} listo.` : `${sc.name} done.`);
+    return { reply, confirmations: r.confirmations, fast: true };
+  }
+  const n = norm(text);
+  if (n.length > 60 || PROTECTED_WORDS.test(n) || NOT_SIMPLE.test(n) || /[0-9]+ ?(grados|degrees)/.test(n)) return null;
+  try {
+    const r = await ha.conversation(text, user.language);
+    const resp = r?.response;
+    if (resp?.response_type === "action_done" && (resp.data?.success?.length || 0) > 0 && !(resp.data?.failed?.length)) {
+      stateCache.at = 0;
+      audit({ user: user.id, action: "assist", text, targets: resp.data.success.map(x => x.id) });
+      return { reply: resp.speech?.plain?.speech || (es() ? "Listo." : "Done."), confirmations: [], fast: true };
+    }
+  } catch (e) { console.error("assist", e.message); }
+  return null;
+}
+
 // ---------- agent loop ----------
 async function chat(user, text) {
+  const fast = await fastPath(user, text).catch(() => null);
+  if (fast) { pushFeed({ t: Date.now(), who: user.name, text, reply: fast.reply }); return fast; }
   const history = sessions.get(user.id) || [];
   history.push({ role: "user", content: text });
-  const confirmations = [];
+  const ctx = { confirmations: [], images: [] };
   let reply = "";
   for (let step = 0; step < 8; step++) {
     const r = await anthropic.messages.create({ model: MODEL, max_tokens: 900, system: systemPrompt(user), tools, messages: history });
@@ -171,93 +283,238 @@ async function chat(user, text) {
     const results = [];
     for (const u of uses) {
       let out;
-      try { out = await runTool(u.name, u.input, user); } catch (e) { out = { error: e.message }; }
+      try { out = await runTool(u.name, u.input, user, ctx); } catch (e) { out = { error: e.message }; }
       if (out && out.needs_confirmation) {
-        const id = Math.random().toString(36).slice(2, 10);
+        const id = newId();
         pending.set(id, { userId: user.id, call: out });
-        confirmations.push({ id, ...out });
+        ctx.confirmations.push({ id, ...out });
         out = { pending_confirmation: id, note: "Waiting for the user to confirm in the app." };
       }
       results.push({ type: "tool_result", tool_use_id: u.id, content: JSON.stringify(out) });
     }
     history.push({ role: "user", content: results });
   }
-  sessions.set(user.id, history.slice(-40));
+  sessions.set(user.id, trimHistory(history));
   pushFeed({ t: Date.now(), who: user.name, text, reply });
-  return { reply, confirmations };
+  return { reply, confirmations: ctx.confirmations, images: ctx.images };
+}
+// keep history valid: never start on a tool_result
+function trimHistory(h) {
+  let out = h.slice(-30);
+  while (out.length && !(out[0].role === "user" && typeof out[0].content === "string")) out = out.slice(1);
+  return out;
 }
 
-// ---------- brief ----------
-async function makeBrief(user) {
-  const events = await runTool("get_events", { hours: 24 }, user);
-  const m = await houseModel();
-  const open = [...m.rooms.flatMap(r => r.devices), ...m.unassigned].filter(l => /\[(door|window|opening|garage_door)\]/.test(l) && /=on/.test(l));
-  const r = await anthropic.messages.create({
-    model: MODEL, max_tokens: 350, system: systemPrompt(user),
-    messages: [{ role: "user", content: `Write the morning brief for ${user.name} in ${user.language}. 3 to 6 short lines, plain language, most important first, no bullets. Cover: visitors and doorbell, doors/sliders currently open, alarm and lock state, anything unavailable. Currently open: ${open.join("; ") || "nothing"}.\nEvents:\n${events.join("\n")}` }]
-  });
-  const text = r.content.find(c => c.type === "text")?.text || "";
-  pushFeed({ t: Date.now(), who: "Bina", text: "Morning brief", reply: text });
-  return text;
-}
-async function notifyAll(title, message) {
+// ---------- notifications ----------
+async function notifyOwner(title, message) {
   try {
     const svcs = await ha.services();
     const notify = svcs.find(s => s.domain === "notify");
     const targets = Object.keys(notify?.services || {}).filter(n => n.startsWith("mobile_app_"));
     for (const n of targets) await ha.call("notify", n, { title, message }).catch(() => {});
-    await ha.call("persistent_notification", "create", { title, message, notification_id: "bina_brief" }).catch(() => {});
     return targets.length;
   } catch { return 0; }
+}
+async function alertIntegrator(title, message) {
+  pushAlert({ t: Date.now(), title, message });
+  await ha.call("persistent_notification", "create", { title: `Bina: ${title}`, message, notification_id: "bina_" + norm(title).replace(/\s+/g, "_").slice(0, 40) }).catch(() => {});
+  if (ALERT_URL) {
+    await fetch(ALERT_URL, { method: "POST", headers: { Title: `${house.name}: ${title}`, Tags: "house" }, body: message }).catch(e => console.error("alert_url", e.message));
+  }
+}
+
+// ---------- monitors: doorbell/motion capture, offline devices, batteries ----------
+const lastShot = new Map();
+let prevStates = null;
+async function monitorEvents() {
+  const st = await states();
+  if (!prevStates) { prevStates = st; return; }
+  const r = await registries();
+  const entReg = new Map(r.entities.map(e => [e.entity_id, e]));
+  const alarm = Object.values(st).find(s => dom(s.entity_id) === "alarm_control_panel" && (Object.keys(r.exposed).length === 0 || r.exposed[s.entity_id]?.conversation));
+  const armed = alarm && /^armed/.test(alarm.state);
+  for (const s of Object.values(st)) {
+    const id = s.entity_id, prev = prevStates[id];
+    if (!prev || prev.state === s.state) continue;
+    const isDing = (dom(id) === "binary_sensor" && /ding|doorbell/.test(id) && s.state === "on") || (dom(id) === "event" && /ding|doorbell/.test(id));
+    const isMotion = dom(id) === "binary_sensor" && (s.attributes?.device_class === "motion" || /_motion$/.test(id)) && s.state === "on";
+    if (!isDing && !(isMotion && armed)) continue;
+    const devId = entReg.get(id)?.device_id;
+    if (!devId) continue;
+    if (Date.now() - (lastShot.get(devId) || 0) < (isDing ? 30000 : 120000)) continue;
+    lastShot.set(devId, Date.now());
+    const cams = r.entities.filter(e => e.device_id === devId && dom(e.entity_id) === "camera").map(e => e.entity_id);
+    const cam = cams.find(c => /snapshot/.test(c)) || cams[0];
+    const devName = r.devices.find(d => d.id === devId)?.name_by_user || r.devices.find(d => d.id === devId)?.name || fname(s);
+    const title = isDing ? (es() ? `Timbre: ${devName}` : `Doorbell: ${devName}`) : (es() ? `Movimiento con alarma armada: ${devName}` : `Motion while armed: ${devName}`);
+    let text = "", image = null;
+    if (cam) {
+      try {
+        if (isDing) await new Promise(res => setTimeout(res, 2500));
+        const snap = await snapshotFile(cam, isDing ? "ding" : "motion");
+        image = snap.url;
+        text = await describeImage(snap.b64, owner().language);
+      } catch (e) { console.error("capture", e.message); }
+    }
+    pushEvent({ t: Date.now(), kind: isDing ? "doorbell" : "motion", title, text, image, camera: cam });
+    if (isDing ? DOORBELL_ALERTS : true) notifyOwner(title, text || (es() ? "Abre Bina para ver." : "Open Bina to see."));
+  }
+  prevStates = st;
+}
+
+const offlineSince = new Map(); const offlineAlerted = new Set(); const batteryAlerted = new Map();
+async function monitorHealth() {
+  const list = await exposedEntities({ includeNoisy: true });
+  const st = await states();
+  const now = Date.now(); const down = []; const back = [];
+  for (const { s, room } of list) {
+    const label = `${fname(s)}${room ? " (" + room + ")" : ""}`;
+    if (s.state === "unavailable") {
+      if (!offlineSince.has(s.entity_id)) offlineSince.set(s.entity_id, now);
+      if (now - offlineSince.get(s.entity_id) > 10 * 60e3 && !offlineAlerted.has(s.entity_id)) { offlineAlerted.add(s.entity_id); down.push(label); }
+    } else {
+      offlineSince.delete(s.entity_id);
+      if (offlineAlerted.delete(s.entity_id)) back.push(label);
+    }
+  }
+  if (down.length) await alertIntegrator(es() ? "equipos sin conexión" : "devices offline", down.join(", "));
+  if (back.length) await alertIntegrator(es() ? "equipos de vuelta" : "devices back online", back.join(", "));
+  // batteries: any sensor with device_class battery under 20, once a day
+  const low = Object.values(st).filter(s => s.attributes?.device_class === "battery" && !isNaN(+s.state) && +s.state < 20 && now - (batteryAlerted.get(s.entity_id) || 0) > 86400e3);
+  if (low.length) { low.forEach(s => batteryAlerted.set(s.entity_id, now)); await alertIntegrator(es() ? "batería baja" : "low battery", low.map(s => `${fname(s)} ${s.state}%`).join(", ")); }
+}
+setInterval(() => monitorEvents().catch(e => console.error("events", e.message)), 5000);
+setInterval(() => monitorHealth().catch(e => console.error("health", e.message)), 120000);
+
+// ---------- brief ----------
+async function makeBrief(user) {
+  const evs = await runTool("get_events", { hours: 24 }, user, {});
+  const m = await houseModel();
+  const open = [...m.rooms.flatMap(r => r.devices), ...m.unassigned].filter(l => /\[(door|window|opening|garage_door)\]/.test(l) && /=on/.test(l));
+  const r = await anthropic.messages.create({
+    model: MODEL, max_tokens: 350, system: systemPrompt(user),
+    messages: [{ role: "user", content: `Write the morning brief for ${user.name} in ${user.language}. 3 to 6 short lines, plain language, most important first, no bullets. Cover: visitors and doorbell, doors/sliders currently open, alarm and lock state, anything unavailable. Currently open: ${open.join("; ") || "nothing"}.\nEvents:\n${evs.join("\n")}` }]
+  });
+  const text = r.content.find(c => c.type === "text")?.text || "";
+  pushFeed({ t: Date.now(), who: "Bina", text: es() ? "Resumen del día" : "Morning brief", reply: text });
+  return text;
 }
 let lastBriefDay = "";
 setInterval(async () => {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: house.timezone }));
   const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const day = now.toDateString();
-  if (hhmm !== BRIEF_TIME || lastBriefDay === day) return;
-  lastBriefDay = day;
+  if (hhmm !== BRIEF_TIME || lastBriefDay === now.toDateString()) return;
+  lastBriefDay = now.toDateString();
   for (const u of house.residents.filter(r => r.brief)) {
-    try { const text = await makeBrief(u); await notifyAll("Bina", text); } catch (e) { console.error("brief", e.message); }
+    try { const text = await makeBrief(u); await notifyOwner("Bina", text); } catch (e) { console.error("brief", e.message); }
   }
 }, 30000);
 
+// ---------- suggestions ----------
+async function suggestScenes(user) {
+  const m = await houseModel();
+  const r = await anthropic.messages.create({
+    model: MODEL, max_tokens: 2500,
+    system: "You design home scenes. Output only JSON, no prose.",
+    messages: [{ role: "user", content: `House: ${JSON.stringify(m)}\n\nPropose 6 useful scenes for this exact house in ${user.language === "es" ? "Spanish" : "English"} (for example morning, movie night, dinner, relax, leaving, good night), skipping any that already exist: ${house.scenes.map(s => s.name).join(", ") || "none"}. Use only entity ids listed above. Lights: light.turn_on with data.brightness_pct or light.turn_off. Shades: cover.open_cover/close_cover. Climate: climate.set_temperature. Speakers: use {"music":{"query":"...","room":"<room name>","volume_pct":20}} or media_player.media_pause. Never include locks, alarm or cameras. Short names (1 or 2 words). Return JSON array: [{"name":"...","summary":"one short line","actions":[{"domain":"light","service":"turn_on","entity_ids":["light.x"],"data":{"brightness_pct":30}}]}]` }]
+  });
+  const txt = r.content.find(c => c.type === "text")?.text || "[]";
+  const json = txt.slice(txt.indexOf("["), txt.lastIndexOf("]") + 1);
+  const known = new Set((await exposedEntities({ includeNoisy: true })).map(x => x.s.entity_id));
+  return JSON.parse(json).map(s => ({ ...s, actions: (s.actions || []).filter(a => a.music || ((a.entity_ids || []).length && a.entity_ids.every(id => known.has(id)) && !["lock", "alarm_control_panel", "camera"].includes(a.domain))) })).filter(s => s.actions.length);
+}
+
 // ---------- routes ----------
 const userFrom = (req) => house.residents.find(r => r.id === (req.headers["x-bina-user"] || "owner")) || house.residents[0];
+const wrap = (fn) => async (req, res) => { try { await fn(req, res); } catch (e) { console.error(req.path, e.message); res.status(500).json({ error: e.message }); } };
 
 app.post("/api/chat", async (req, res) => {
   try { res.json(await chat(userFrom(req), String(req.body.text || "").slice(0, 2000))); }
-  catch (e) { res.status(500).json({ reply: "Something went wrong on my side: " + e.message, confirmations: [] }); }
+  catch (e) { res.status(500).json({ reply: (es() ? "Algo falló de mi lado: " : "Something went wrong on my side: ") + e.message, confirmations: [] }); }
 });
 
-app.post("/api/confirm/:id", async (req, res) => {
+app.post("/api/confirm/:id", wrap(async (req, res) => {
   const p = pending.get(req.params.id);
   const user = userFrom(req);
-  if (!p) return res.status(404).json({ error: "expired" });
+  if (!p) return res.status(404).json({ error: es() ? "Expiró, pídelo de nuevo." : "Expired, ask again." });
   pending.delete(req.params.id);
   if (req.body.approve !== true) return res.json({ ok: true, reply: user.language === "es" ? "Cancelado." : "Cancelled." });
-  try {
-    if (p.call.kind === "service") {
-      await ha.call(p.call.domain, p.call.service, { entity_id: p.call.entity_ids, ...(p.call.data || {}) });
-      audit({ user: user.id, action: `${p.call.domain}.${p.call.service}`, entities: p.call.entity_ids, confirmed: true });
-      setTimeout(() => ha.call("homeassistant", "update_entity", { entity_id: p.call.entity_ids }).catch(() => {}), 5000);
-    } else if (p.call.kind === "automation") {
-      const id = "bina_" + Date.now();
-      await ha.saveAutomation(id, p.call.config);
-      audit({ user: user.id, action: "automation.create", id, alias: p.call.alias, confirmed: true });
-    }
-    stateCache.at = 0;
-    res.json({ ok: true, reply: user.language === "es" ? "Listo." : "Done." });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
+  if (p.call.kind === "service") {
+    await ha.call(p.call.domain, p.call.service, { entity_id: p.call.entity_ids, ...(p.call.data || {}) });
+    audit({ user: user.id, action: `${p.call.domain}.${p.call.service}`, entities: p.call.entity_ids, confirmed: true });
+    setTimeout(() => ha.call("homeassistant", "update_entity", { entity_id: p.call.entity_ids }).catch(() => {}), 5000);
+  } else if (p.call.kind === "automation") {
+    const id = "bina_" + Date.now();
+    await ha.saveAutomation(id, p.call.config);
+    audit({ user: user.id, action: "automation.create", id, alias: p.call.alias, confirmed: true });
+  }
+  stateCache.at = 0;
+  res.json({ ok: true, reply: user.language === "es" ? "Listo." : "Done." });
+}));
 
-app.get("/api/house", async (_req, res) => {
-  try { res.json(await houseModel()); } catch (e) { res.status(500).json({ error: e.message }); }
-});
+// home screen data
+app.get("/api/home", wrap(async (req, res) => {
+  const list = await exposedEntities();
+  const pick = (d) => list.filter(x => dom(x.s.entity_id) === d);
+  const alarm = pick("alarm_control_panel")[0]?.s;
+  const locks = pick("lock").map(x => ({ id: x.s.entity_id, name: fname(x.s), state: x.s.state }));
+  const climate = pick("climate").map(x => ({ id: x.s.entity_id, name: fname(x.s), current: x.s.attributes.current_temperature, target: x.s.attributes.temperature, mode: x.s.state }));
+  const openings = pick("binary_sensor").filter(x => /^(door|window|opening|garage_door)$/.test(x.s.attributes.device_class || "") && x.s.state === "on").map(x => fname(x.s));
+  const rooms = new Map();
+  for (const x of pick("light")) { const k = x.room || (es() ? "Otros" : "Other"); if (!rooms.has(k)) rooms.set(k, { room: k, on: 0, total: 0 }); const r = rooms.get(k); r.total++; if (x.s.state === "on") r.on++; }
+  const playing = pick("media_player").filter(x => x.s.state === "playing").map(x => ({ id: x.s.entity_id, name: fname(x.s), room: x.room, title: x.s.attributes.media_title || "", artist: x.s.attributes.media_artist || "" }));
+  res.json({
+    version: VERSION, house: house.name, user: userFrom(req).name, language: userFrom(req).language,
+    status: { alarm: alarm ? { id: alarm.entity_id, state: alarm.state } : null, locks, climate, openings },
+    scenes: house.scenes.map(s => ({ id: s.id, name: s.name })),
+    rooms: [...rooms.values()].sort((a, b) => b.total - a.total),
+    playing,
+    events: events.slice(0, 4),
+    alerts: alerts.filter(a => a.t > Date.now() - 48 * 3600e3).slice(0, 3)
+  });
+}));
+app.post("/api/scene/:id", wrap(async (req, res) => {
+  const sc = house.scenes.find(s => s.id === req.params.id);
+  if (!sc) return res.status(404).json({ error: "no scene" });
+  const r = await runScene(sc, userFrom(req));
+  pushFeed({ t: Date.now(), who: userFrom(req).name, text: sc.name, reply: r.failed.length ? `fallos: ${r.failed.join(", ")}` : "OK" });
+  res.json({ ok: !r.failed.length, failed: r.failed, confirmations: r.confirmations });
+}));
+app.delete("/api/scene/:id", wrap(async (req, res) => { house.scenes = house.scenes.filter(s => s.id !== req.params.id); saveHouse(); res.json({ ok: true }); }));
+app.post("/api/scenes", wrap(async (req, res) => {
+  const { name, actions } = req.body || {};
+  if (!name || !Array.isArray(actions)) return res.status(400).json({ error: "name and actions" });
+  const out = await runTool("save_scene", { name, actions }, userFrom(req), {});
+  res.json(out);
+}));
+app.get("/api/suggest", wrap(async (req, res) => res.json(await suggestScenes(userFrom(req)))));
+app.post("/api/room", wrap(async (req, res) => {
+  const { room, on } = req.body || {};
+  const lights = (await exposedEntities()).filter(x => dom(x.s.entity_id) === "light" && (x.room || (es() ? "Otros" : "Other")) === room).map(x => x.s.entity_id);
+  if (!lights.length) return res.status(404).json({ error: "no lights" });
+  await ha.call("light", on ? "turn_on" : "turn_off", { entity_id: lights });
+  stateCache.at = 0; audit({ user: userFrom(req).id, action: "room", room, on });
+  res.json({ ok: true });
+}));
+app.post("/api/alloff", wrap(async (req, res) => {
+  const list = await exposedEntities();
+  const lights = list.filter(x => dom(x.s.entity_id) === "light" && x.s.state === "on").map(x => x.s.entity_id);
+  const players = list.filter(x => dom(x.s.entity_id) === "media_player" && x.s.state === "playing").map(x => x.s.entity_id);
+  if (lights.length) await ha.call("light", "turn_off", { entity_id: lights });
+  if (players.length) await ha.call("media_player", "media_pause", { entity_id: players }).catch(() => {});
+  stateCache.at = 0; audit({ user: userFrom(req).id, action: "alloff", lights: lights.length, players: players.length });
+  res.json({ ok: true, lights: lights.length, players: players.length });
+}));
+app.post("/api/media", wrap(async (req, res) => {
+  const { entity_id, action } = req.body || {};
+  if (!/^media_player\./.test(entity_id) || !["media_pause", "media_play", "media_next_track", "volume_up", "volume_down"].includes(action)) return res.status(400).json({ error: "bad request" });
+  await ha.call("media_player", action, { entity_id }); stateCache.at = 0; res.json({ ok: true });
+}));
+app.get("/api/house", wrap(async (_req, res) => res.json(await houseModel())));
 app.get("/api/feed", (_req, res) => res.json(feed.slice(0, 50)));
-app.get("/api/brief", async (req, res) => {
-  try { const text = await makeBrief(userFrom(req)); res.json({ brief: text }); } catch (e) { res.status(500).json({ error: e.message }); }
-});
-app.get("/api/me", (req, res) => { const u = userFrom(req); res.json({ house: house.name, user: u.name, language: u.language }); });
+app.get("/api/events", (_req, res) => res.json(events.slice(0, 60)));
+app.get("/api/alerts", (_req, res) => res.json(alerts.slice(0, 50)));
+app.get("/api/brief", wrap(async (req, res) => res.json({ brief: await makeBrief(userFrom(req)) })));
+app.get("/api/me", (req, res) => { const u = userFrom(req); res.json({ house: house.name, user: u.name, language: u.language, version: VERSION }); });
 
-app.listen(PORT, () => console.log(`Bina 0.2.0 listening on :${PORT} for ${house.name}, brief at ${BRIEF_TIME}`));
+app.listen(PORT, () => console.log(`Bina ${VERSION} listening on :${PORT} for ${house.name}, brief at ${BRIEF_TIME}, alerts ${ALERT_URL ? "on" : "local only"}`));

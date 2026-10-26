@@ -1,5 +1,5 @@
 name: Bina
-version: "0.2.0"
+version: "0.3.0"
 slug: bina
 description: AI concierge for your home. Chat or talk to the house, get the morning brief.
 url: https://mysmartcasa.com/bina
@@ -18,6 +18,8 @@ options:
   owner_name: "Owner"
   language: en
   brief_time: "07:30"
+  alert_url: ""
+  doorbell_alerts: true
   protected_entities: []
 schema:
   anthropic_api_key: password
@@ -27,4 +29,6 @@ schema:
   owner_name: str
   language: list(en|es|he)
   brief_time: str
+  alert_url: str?
+  doorbell_alerts: bool
   protected_entities: [str]

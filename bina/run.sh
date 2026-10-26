@@ -2,6 +2,8 @@
 export ANTHROPIC_API_KEY="$(bashio::config 'anthropic_api_key')"
 export BINA_MODEL="$(bashio::config 'model')"
 export BINA_BRIEF_TIME="$(bashio::config 'brief_time')"
+export BINA_ALERT_URL="$(bashio::config 'alert_url' '')"
+export BINA_DOORBELL="$(bashio::config 'doorbell_alerts' 'true')"
 export HA_URL="http://supervisor/core"
 export HA_TOKEN="${SUPERVISOR_TOKEN}"
 export BINA_PORT=8787

@@ -1,58 +1,101 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Bina">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>Bina</title>
 <style>
-  :root{--ink:#000;--paper:#fff;--bone:#F3F1EC;--mute:#767676;--rule:#E4E4E4;--safe-b:env(safe-area-inset-bottom)}
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  :root{--ink:#000;--paper:#fff;--soft:#EDEDEB;--mute:#6B6B6B;--rule:#E2E2E0;--warn:#B3261E;--safe-t:env(safe-area-inset-top);--safe-b:env(safe-area-inset-bottom)}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:var(--paper);color:var(--ink);font-family:-apple-system,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
   body{display:flex;flex-direction:column;overflow:hidden}
-  header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 12px;padding-top:calc(18px + env(safe-area-inset-top))}
-  .wordmark{font-size:13px;font-weight:600;letter-spacing:.42em}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  header{display:flex;align-items:baseline;justify-content:space-between;padding:calc(14px + var(--safe-t)) 20px 6px}
+  .wordmark{font-size:13px;font-weight:700;letter-spacing:.42em}
   .house{font-size:12px;color:var(--mute)}
-  nav{display:flex;gap:22px;padding:0 20px 12px;border-bottom:1px solid var(--rule)}
-  nav button{background:none;border:0;font:inherit;font-size:14px;color:var(--mute);padding:6px 0;border-bottom:1.5px solid transparent}
-  nav button[aria-selected=true]{color:var(--ink);border-color:var(--ink)}
   main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-  section{display:none;padding:16px 20px 24px}
+  section{display:none;padding:8px 20px 28px}
   section.on{display:block}
-  .msg{max-width:86%;margin:0 0 12px;font-size:16px;line-height:1.4;white-space:pre-wrap}
+
+  /* home */
+  .hello{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:10px 0 8px}
+  .status{font-size:17px;line-height:1.4;color:var(--mute);max-width:32ch}
+  .status b{color:var(--ink);font-weight:600}
+  .status .warn{color:var(--warn);font-weight:600}
+  .scenes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0 10px}
+  .scene{position:relative;overflow:hidden;min-height:96px;border-radius:18px;background:var(--ink);color:var(--paper);text-align:left;padding:14px 16px;display:flex;align-items:flex-end;font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.15}
+  .scene::after{content:"";position:absolute;inset:0;background:var(--paper);transform:scaleX(0);transform-origin:left;transition:transform .5s ease;mix-blend-mode:difference}
+  .scene.run::after{transform:scaleX(1)}
+  .scene.done{outline:2px solid var(--ink);outline-offset:3px}
+  .scene.add{background:var(--paper);color:var(--ink);border:1.5px dashed #BDBDBB;font-weight:500;font-size:15px}
+  .scene.add::after{display:none}
+  .hint{font-size:12px;color:var(--mute);margin:4px 0 0}
+
+  h2{font-size:13px;font-weight:600;color:var(--mute);margin:30px 0 4px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--rule);font-size:16px}
+  .row .sub{font-size:13px;color:var(--mute);margin-top:2px}
+  .sw{flex:none;width:52px;height:32px;border-radius:16px;background:var(--soft);position:relative;transition:background .2s}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+  .sw[aria-checked=true]{background:var(--ink)}
+  .sw[aria-checked=true]::after{transform:translateX(20px)}
+  .mini{flex:none;font-size:14px;font-weight:600;padding:8px 14px;border-radius:999px;border:1.5px solid var(--ink)}
+  .alloff{display:block;width:100%;margin-top:18px;padding:15px;border-radius:14px;border:1.5px solid var(--ink);font-size:16px;font-weight:600}
+
+  .event{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule)}
+  .event img{flex:none;width:92px;height:64px;object-fit:cover;border-radius:10px;background:var(--soft)}
+  .event .t{font-size:12px;color:var(--mute)}
+  .event .h{font-size:15px;font-weight:600;margin:2px 0}
+  .event .d{font-size:14px;line-height:1.35}
+  .alert{background:#FBEAE9;color:var(--warn);border-radius:12px;padding:12px 14px;font-size:14px;margin-top:14px;line-height:1.4}
+
+  /* talk */
+  #talk{padding-bottom:12px}
+  .msg{max-width:86%;margin:0 0 12px;font-size:17px;line-height:1.4;white-space:pre-wrap}
   .msg.me{margin-left:auto;background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:18px 18px 4px 18px}
   .msg.bina{padding:2px 0}
-  .msg.bina::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);margin-right:10px;vertical-align:middle}
-  .typing{color:var(--mute);font-size:14px}
-  .card{background:var(--bone);padding:14px 16px;border-radius:12px;margin:8px 0 14px;font-size:14px}
-  .card b{display:block;margin-bottom:4px;font-weight:600}
-  .card .row{display:flex;gap:10px;margin-top:10px}
-  .card button{flex:1;font:inherit;font-size:14px;padding:10px;border-radius:10px;border:1px solid var(--ink);background:var(--paper)}
-  .card button.yes{background:var(--ink);color:var(--paper)}
-  .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
-  .chips button{white-space:nowrap;font:inherit;font-size:13px;padding:8px 14px;border-radius:999px;border:1px solid var(--rule);background:var(--paper)}
-  form{display:flex;gap:8px;padding:10px 16px calc(12px + var(--safe-b));border-top:1px solid var(--rule);background:var(--paper)}
-  input{flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 16px;border:1px solid var(--rule);border-radius:999px;outline:none}
+  .msg img{display:block;width:100%;max-width:340px;border-radius:12px;margin-top:8px}
+  .typing{color:var(--mute)}
+  .card{background:var(--soft);padding:14px 16px;border-radius:14px;margin:8px 0 14px;font-size:15px}
+  .card b{display:block;margin-bottom:4px}
+  .card .pair{display:flex;gap:10px;margin-top:12px}
+  .card .pair button{flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--ink);font-weight:600}
+  .card .pair .yes{background:var(--ink);color:var(--paper)}
+  .tips{color:var(--mute);font-size:15px;line-height:1.6;margin:6px 0 18px}
+  form{display:none;gap:8px;padding:10px 16px 10px;border-top:1px solid var(--rule);background:var(--paper)}
+  body.talking form{display:flex}
+  input{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 16px;border:1px solid var(--rule);border-radius:999px;outline:none;background:var(--paper)}
   input:focus{border-color:var(--ink)}
-  form button{width:46px;height:46px;border-radius:50%;border:0;background:var(--ink);color:var(--paper);font-size:18px;flex:none}
-  form button.mic{background:var(--paper);color:var(--ink);border:1px solid var(--rule)}
-  form button.mic.live{background:#c00;color:#fff;border-color:#c00}
-  .room{margin-bottom:22px}
-  .room h3{font-size:12px;font-weight:500;color:var(--mute);margin-bottom:8px}
-  .dev{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--rule);font-size:15px}
-  .dev .st{color:var(--mute);font-size:13px;text-align:right;flex:none}
-  .dev .st.on{color:var(--ink);font-weight:500}
-  .item{padding:14px 0;border-bottom:1px solid var(--rule)}
-  .item .t{font-size:12px;color:var(--mute);margin-bottom:4px}
-  .item .q{font-size:14px;color:var(--mute)}
-  .item .a{font-size:15px;line-height:1.4;margin-top:4px;white-space:pre-wrap}
-  .brief{background:var(--bone);padding:16px;border-radius:12px;margin-bottom:16px;font-size:15px;line-height:1.5;white-space:pre-wrap}
-  .brief small{display:block;color:var(--mute);font-size:12px;margin-bottom:6px}
-  .empty{color:var(--mute);font-size:14px;padding:30px 0;text-align:center}
-  .pill{font:inherit;font-size:13px;padding:8px 14px;border-radius:999px;border:1px solid var(--ink);background:var(--paper);margin-bottom:14px}
+  form button{flex:none;width:48px;height:48px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:20px}
+  form .mic{background:var(--paper);color:var(--ink);border:1.5px solid var(--ink)}
+  form .mic.live{background:var(--warn);border-color:var(--warn);color:#fff}
+
+  /* tabs */
+  nav{display:flex;border-top:1px solid var(--rule);padding:6px 8px calc(6px + var(--safe-b));background:var(--paper)}
+  nav button{flex:1;padding:8px 0;font-size:13px;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:3px}
+  nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8}
+  nav button[aria-selected=true]{color:var(--ink);font-weight:600}
+
+  /* sheet */
+  .sheet{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-end;z-index:5}
+  .sheet.on{display:flex}
+  .sheet .panel{background:var(--paper);width:100%;max-height:82vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:18px 20px calc(20px + var(--safe-b))}
+  .sheet h3{font-size:20px;margin-bottom:12px}
+  .sug{padding:12px 0;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .sug .n{font-weight:600}
+  .sug .s{font-size:14px;color:var(--mute);margin-top:2px}
+  .close{display:block;width:100%;margin-top:16px;padding:14px;border-radius:12px;background:var(--soft);font-weight:600}
+  .toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+  .toast.on{opacity:1}
+  .empty{color:var(--mute);font-size:15px;padding:24px 0}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
@@ -60,80 +103,182 @@
   <div class="wordmark">BINA</div>
   <div class="house" id="houseName"></div>
 </header>
-<nav role="tablist">
-  <button role="tab" aria-selected="true" data-tab="chat">Chat</button>
-  <button role="tab" data-tab="house">House</button>
-  <button role="tab" data-tab="feed">Feed</button>
-</nav>
 <main>
-  <section id="chat" class="on">
-    <div class="chips" id="chips"></div>
-    <div id="log"></div>
-  </section>
-  <section id="house"><div class="empty">…</div></section>
-  <section id="feed"><div class="empty">…</div></section>
+  <section id="home" class="on"></section>
+  <section id="talk"><div id="log"></div></section>
+  <section id="activity"></section>
 </main>
 <form id="f" autocomplete="off">
-  <input id="in" placeholder="Tell Bina…" enterkeyhint="send">
-  <button type="button" class="mic" id="mic" aria-label="Voice">●</button>
-  <button type="submit" aria-label="Send">↑</button>
+  <input id="in" enterkeyhint="send" aria-label="Mensaje">
+  <button type="button" class="mic" id="mic" aria-label="Hablar">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+  </button>
+  <button type="submit" aria-label="Enviar">↑</button>
 </form>
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-tab="home"><svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9H4z"/></svg><span data-t="tHome"></span></button>
+  <button role="tab" data-tab="talk"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span data-t="tTalk"></span></button>
+  <button role="tab" data-tab="activity"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg><span data-t="tAct"></span></button>
+</nav>
+<div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
+<div class="toast" id="toast"></div>
 
 <script>
 const USER = localStorage.getItem("bina_user") || "owner";
 const H = { "Content-Type": "application/json", "X-Bina-User": USER };
 const $ = (s) => document.querySelector(s);
-const log = $("#log");
-let LANG = "en";
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const api = (p, o = {}) => fetch(p, { headers: H, ...o }).then(r => r.json());
+let LANG = "es";
 const T = {
-  en: { hi: "Hi. What would you like the house to do?", chips: ["What's on right now?", "Movie night", "I'm leaving", "Good night", "Who came to the door today?", "Any door open?"], confirm: "Confirm this action?", routine: "Add this routine?", cancel: "Cancel", ok: "Confirm", offline: "Bina is offline. Check the hub.", brief: "Morning brief now", writing: "Writing…", norooms: "No rooms yet. Assign devices to areas in Home Assistant.", other: "Other", nothing: "Nothing yet.", ph: "Tell Bina…" },
-  es: { hi: "Hola. ¿Qué hacemos en la casa?", chips: ["¿Qué está prendido?", "Modo cine", "Me voy", "Buenas noches", "¿Quién vino hoy?", "¿Hay alguna puerta abierta?"], confirm: "¿Confirmas esta acción?", routine: "¿Agrego esta rutina?", cancel: "Cancelar", ok: "Confirmar", offline: "Bina está fuera de línea. Revisa el hub.", brief: "Resumen de hoy", writing: "Escribiendo…", norooms: "Sin cuartos todavía. Asigna dispositivos a áreas en Home Assistant.", other: "Otros", nothing: "Nada todavía.", ph: "Dile a Bina…" }
+  es: { tHome: "Inicio", tTalk: "Hablar", tAct: "Actividad", morning: "Buenos días", afternoon: "Buenas tardes", evening: "Buenas noches",
+    alarm: { disarmed: "Alarma desarmada", armed_home: "Alarma armada en casa", armed_away: "Alarma armada fuera", armed_night: "Alarma armada de noche", triggered: "ALARMA ACTIVADA", arming: "Armando alarma", pending: "Alarma pendiente" },
+    closed: "Todo cerrado", open: (l) => `Abierto: ${l}`, unlocked: (l) => `Sin seguro: ${l}`, inside: "adentro",
+    scenes: "Escenas", addScene: "Sugerir escenas", holdHint: "Mantén presionado un botón para borrarlo.", rooms: "Luces", of: (a, b) => `${a} de ${b} prendidas`, allOff: "Apagar todo", playing: "Sonando", pause: "Pausa",
+    recent: "Reciente", seeAll: "Ver todo", noEvents: "Sin novedades.", ph: "Dile a Bina…", hi: "Hola. Pídeme lo que quieras para la casa.",
+    tips: "Prueba: \"pon jazz en la piscina al 20\", \"¿hay alguna puerta abierta?\", \"modo cena es cocina al 60 y jazz suave\", \"¿quién vino hoy?\"",
+    confirm: "¿Confirmas?", routine: "¿Agrego esta rutina?", cancel: "Cancelar", ok: "Confirmar", offline: "No llego a la casa. Revisa que estés en el WiFi o que Nabu Casa esté activo.",
+    suggesting: "Pensando escenas para tu casa…", sugTitle: "Escenas para tu casa", add: "Agregar", added: "Agregado", close: "Cerrar", delQ: (n) => `¿Borrar "${n}"?`,
+    brief: "Resumen de hoy", writing: "Escribiendo…", alerts: "Avisos", act: "Timbre y cámaras", feed: "Conversación", sceneDone: (n) => `${n} listo`, sceneFail: (n) => `${n}: algo no respondió` },
+  en: { tHome: "Home", tTalk: "Talk", tAct: "Activity", morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening",
+    alarm: { disarmed: "Alarm off", armed_home: "Alarm armed home", armed_away: "Alarm armed away", armed_night: "Alarm armed night", triggered: "ALARM TRIGGERED", arming: "Alarm arming", pending: "Alarm pending" },
+    closed: "Everything closed", open: (l) => `Open: ${l}`, unlocked: (l) => `Unlocked: ${l}`, inside: "inside",
+    scenes: "Scenes", addScene: "Suggest scenes", holdHint: "Press and hold a button to remove it.", rooms: "Lights", of: (a, b) => `${a} of ${b} on`, allOff: "Turn everything off", playing: "Playing", pause: "Pause",
+    recent: "Recent", seeAll: "See all", noEvents: "Nothing new.", ph: "Tell Bina…", hi: "Hi. Ask me for anything in the house.",
+    tips: "Try: \"play jazz by the pool at 20\", \"is any door open?\", \"dinner mode is kitchen at 60 and soft jazz\", \"who came today?\"",
+    confirm: "Confirm?", routine: "Add this routine?", cancel: "Cancel", ok: "Confirm", offline: "Can't reach the house. Check you're on the WiFi or that remote access is on.",
+    suggesting: "Thinking of scenes for your house…", sugTitle: "Scenes for your house", add: "Add", added: "Added", close: "Close", delQ: (n) => `Remove "${n}"?`,
+    brief: "Today's brief", writing: "Writing…", alerts: "Alerts", act: "Doorbell and cameras", feed: "Conversation", sceneDone: (n) => `${n} done`, sceneFail: (n) => `${n}: something didn't respond` }
 };
-const t = (k) => (T[LANG] || T.en)[k];
+const t = (k) => (T[LANG] || T.es)[k];
+function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 2200); }
+const when = (ts) => new Date(ts).toLocaleString(LANG === "es" ? "es-US" : "en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
 
-document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
-  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === b.dataset.tab));
-  if (b.dataset.tab === "house") loadHouse();
-  if (b.dataset.tab === "feed") loadFeed();
-});
+// tabs
+function show(tab) {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === tab));
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === tab));
+  document.body.classList.toggle("talking", tab === "talk");
+  if (tab === "home") loadHome();
+  if (tab === "activity") loadActivity();
+  if (tab === "talk") { const m = $("main"); m.scrollTop = m.scrollHeight; }
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.tab));
 
+// ---------- home ----------
+let HOME = null;
+async function loadHome() {
+  let h; try { h = await api("api/home"); } catch { $("#home").innerHTML = `<p class="hello">Bina</p><p class="status">${t("offline")}</p>`; return; }
+  HOME = h;
+  const hr = new Date().getHours();
+  const greet = hr < 12 ? t("morning") : hr < 19 ? t("afternoon") : t("evening");
+  const s = h.status, parts = [];
+  if (s.alarm) { const a = t("alarm")[s.alarm.state] || s.alarm.state; parts.push(s.alarm.state === "triggered" ? `<span class="warn">${a}</span>` : `<b>${a}</b>`); }
+  parts.push(s.openings.length ? `<span class="warn">${t("open")(esc(s.openings.join(", ")))}</span>` : t("closed"));
+  const unlocked = s.locks.filter(l => l.state === "unlocked");
+  if (unlocked.length) parts.push(`<span class="warn">${t("unlocked")(esc(unlocked.map(l => l.name).join(", ")))}</span>`);
+  if (s.climate[0]?.current != null) parts.push(`${Math.round(s.climate[0].current)}° ${t("inside")}`);
+  const scenes = h.scenes.map(sc => `<button class="scene" data-id="${esc(sc.id)}" data-name="${esc(sc.name)}">${esc(sc.name)}</button>`).join("");
+  const rooms = h.rooms.map(r => `<div class="row"><div><div>${esc(r.room)}</div><div class="sub">${t("of")(r.on, r.total)}</div></div><button class="sw" role="switch" aria-checked="${r.on > 0}" aria-label="${esc(r.room)}" data-room="${esc(r.room)}"></button></div>`).join("");
+  const playing = h.playing.map(p => `<div class="row"><div><div>${esc(p.room || p.name)}</div><div class="sub">${esc([p.title, p.artist].filter(Boolean).join(", "))}</div></div><button class="mini" data-pause="${esc(p.id)}">${t("pause")}</button></div>`).join("");
+  const evs = h.events.length ? h.events.map(eventRow).join("") : `<p class="empty">${t("noEvents")}</p>`;
+  const al = h.alerts.map(a => `<div class="alert"><b>${esc(a.title)}</b><br>${esc(a.message)}</div>`).join("");
+  $("#houseName").textContent = h.house;
+  $("#home").innerHTML = `
+    <p class="hello">${greet}, ${esc(h.user)}</p>
+    <p class="status">${parts.join(". ")}.</p>
+    ${al}
+    <div class="scenes">${scenes}<button class="scene add" id="suggest">${t("addScene")}</button></div>
+    ${h.scenes.length ? `<p class="hint">${t("holdHint")}</p>` : ""}
+    ${playing ? `<h2>${t("playing")}</h2>${playing}` : ""}
+    <h2>${t("rooms")}</h2>${rooms}
+    <button class="alloff" id="alloff">${t("allOff")}</button>
+    <h2>${t("recent")}</h2>${evs}`;
+  bindHome();
+}
+function eventRow(e) {
+  return `<div class="event">${e.image ? `<img src="${esc(e.image)}" alt="" loading="lazy">` : ""}<div><div class="t">${when(e.t)}</div><div class="h">${esc(e.title)}</div><div class="d">${esc(e.text || "")}</div></div></div>`;
+}
+function bindHome() {
+  document.querySelectorAll(".scene[data-id]").forEach(b => {
+    let timer = null, long = false;
+    const start = () => { long = false; timer = setTimeout(async () => { long = true; if (confirm(t("delQ")(b.dataset.name))) { await api(`api/scene/${encodeURIComponent(b.dataset.id)}`, { method: "DELETE" }); loadHome(); } }, 700); };
+    const end = () => clearTimeout(timer);
+    b.addEventListener("touchstart", start, { passive: true }); b.addEventListener("touchend", end); b.addEventListener("mousedown", start); b.addEventListener("mouseup", end); b.addEventListener("mouseleave", end);
+    b.onclick = async () => {
+      if (long) return;
+      b.classList.add("run");
+      let r; try { r = await api(`api/scene/${encodeURIComponent(b.dataset.id)}`, { method: "POST" }); } catch { r = { ok: false }; }
+      b.classList.remove("run"); b.classList.add("done"); setTimeout(() => b.classList.remove("done"), 1200);
+      toast(r.ok ? t("sceneDone")(b.dataset.name) : t("sceneFail")(b.dataset.name));
+      if (r.confirmations?.length) { show("talk"); r.confirmations.forEach(confirmCard); }
+      setTimeout(loadHome, 1500);
+    };
+  });
+  document.querySelectorAll(".sw[data-room]").forEach(b => b.onclick = async () => {
+    const on = b.getAttribute("aria-checked") !== "true";
+    b.setAttribute("aria-checked", on);
+    await api("api/room", { method: "POST", body: JSON.stringify({ room: b.dataset.room, on }) }).catch(() => toast(t("offline")));
+    setTimeout(loadHome, 1200);
+  });
+  document.querySelectorAll("[data-pause]").forEach(b => b.onclick = async () => { await api("api/media", { method: "POST", body: JSON.stringify({ entity_id: b.dataset.pause, action: "media_pause" }) }); setTimeout(loadHome, 800); });
+  $("#alloff").onclick = async () => { $("#alloff").textContent = "…"; await api("api/alloff", { method: "POST" }).catch(() => {}); toast(t("allOff")); setTimeout(loadHome, 1000); };
+  $("#suggest").onclick = suggest;
+}
+
+// ---------- suggestions sheet ----------
+async function suggest() {
+  const sheet = $("#sheet"), panel = $("#panel");
+  panel.innerHTML = `<h3>${t("sugTitle")}</h3><p class="empty">${t("suggesting")}</p>`;
+  sheet.classList.add("on");
+  let list = []; try { list = await api("api/suggest"); } catch {}
+  panel.innerHTML = `<h3>${t("sugTitle")}</h3>` + (Array.isArray(list) && list.length ? list.map((s, i) => `<div class="sug"><div><div class="n">${esc(s.name)}</div><div class="s">${esc(s.summary || "")}</div></div><button class="mini" data-i="${i}">${t("add")}</button></div>`).join("") : `<p class="empty">${t("offline")}</p>`) + `<button class="close" id="closeSheet">${t("close")}</button>`;
+  panel.querySelectorAll("[data-i]").forEach(b => b.onclick = async () => {
+    const s = list[+b.dataset.i]; b.disabled = true;
+    await api("api/scenes", { method: "POST", body: JSON.stringify({ name: s.name, actions: s.actions }) });
+    b.textContent = t("added");
+  });
+  $("#closeSheet").onclick = () => { sheet.classList.remove("on"); loadHome(); };
+}
+$("#sheet").onclick = (e) => { if (e.target.id === "sheet") { $("#sheet").classList.remove("on"); loadHome(); } };
+
+// ---------- talk ----------
+const log = $("#log");
 const plain = (x) => String(x).replace(/\*\*(.*?)\*\*/g, "$1").replace(/^#+\s*/gm, "").replace(/^\s*[-*]\s+/gm, "").replace(/`/g, "");
 let hist = []; try { hist = JSON.parse(localStorage.getItem("bina_hist") || "[]"); } catch {}
-const saveHist = () => localStorage.setItem("bina_hist", JSON.stringify(hist.slice(-60)));
-function add(cls, text, persist = true) {
-  const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = cls.includes("bina") ? plain(text) : text; log.appendChild(d);
-  d.scrollIntoView({ block: "end" });
-  if (persist && !cls.includes("typing")) { hist.push({ cls, text }); saveHist(); }
+const saveHist = () => { try { localStorage.setItem("bina_hist", JSON.stringify(hist.slice(-60))); } catch {} };
+function add(cls, text, images = [], persist = true) {
+  const d = document.createElement("div"); d.className = "msg " + cls;
+  d.textContent = cls.includes("bina") ? plain(text) : text;
+  images.forEach(src => { const im = document.createElement("img"); im.src = src; im.alt = ""; d.appendChild(im); });
+  log.appendChild(d); $("main").scrollTop = $("main").scrollHeight;
+  if (persist && !cls.includes("typing")) { hist.push({ cls, text, images }); saveHist(); }
   return d;
 }
-
 function confirmCard(c) {
   const d = document.createElement("div"); d.className = "card";
-  const what = c.kind === "service" ? `${c.service.replace(/_/g, " ")}: ${c.entity_ids.map(e => e.split(".")[1].replace(/_/g, " ")).join(", ")}` : c.summary;
-  d.innerHTML = `<b>${c.kind === "service" ? t("confirm") : t("routine")}</b>${what}<div class="row"><button type="button" class="no">${t("cancel")}</button><button type="button" class="yes">${t("ok")}</button></div>`;
-  const send = async (approve) => {
+  const what = c.kind === "service" ? `${c.service.replace(/_/g, " ")}: ${(c.entity_ids || []).map(e => e.split(".")[1].replace(/_/g, " ")).join(", ")}` : c.summary;
+  d.innerHTML = `<b>${c.kind === "service" ? t("confirm") : t("routine")}</b>${esc(what)}<div class="pair"><button type="button" class="no">${t("cancel")}</button><button type="button" class="yes">${t("ok")}</button></div>`;
+  const go = async (approve) => {
     d.querySelectorAll("button").forEach(b => b.disabled = true);
-    const r = await fetch(`api/confirm/${c.id}`, { method: "POST", headers: H, body: JSON.stringify({ approve }) }).then(r => r.json()).catch(() => ({ error: t("offline") }));
+    const r = await api(`api/confirm/${c.id}`, { method: "POST", body: JSON.stringify({ approve }) }).catch(() => ({ error: t("offline") }));
     d.remove(); add("bina", r.reply || r.error || "OK");
   };
-  d.querySelector(".yes").onclick = () => send(true);
-  d.querySelector(".no").onclick = () => send(false);
-  log.appendChild(d); d.scrollIntoView({ block: "end" });
+  d.querySelector(".yes").onclick = () => go(true);
+  d.querySelector(".no").onclick = () => go(false);
+  log.appendChild(d); $("main").scrollTop = $("main").scrollHeight;
 }
-
 async function send(text) {
   text = (text || "").trim(); if (!text) return;
   add("me", text); $("#in").value = "";
-  const w = add("bina typing", "…", false);
+  const w = add("bina typing", "…", [], false);
   try {
-    const r = await fetch("api/chat", { method: "POST", headers: H, body: JSON.stringify({ text }) }).then(r => r.json());
-    w.remove(); if (r.reply) add("bina", r.reply); (r.confirmations || []).forEach(confirmCard);
-  } catch (e) { w.textContent = t("offline"); w.classList.remove("typing"); }
+    const r = await api("api/chat", { method: "POST", body: JSON.stringify({ text }) });
+    w.remove(); if (r.reply || r.images?.length) add("bina", r.reply || "", r.images || []); (r.confirmations || []).forEach(confirmCard);
+  } catch { w.textContent = t("offline"); w.classList.remove("typing"); }
 }
 $("#f").onsubmit = (e) => { e.preventDefault(); send($("#in").value); };
 
-// voice: browser speech recognition (Chrome, Android, iOS Safari)
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const mic = $("#mic");
 if (!SR) mic.style.display = "none";
@@ -143,39 +288,37 @@ else {
     if (rec) { rec.stop(); return; }
     rec = new SR(); rec.lang = LANG === "es" ? "es-US" : LANG === "he" ? "he-IL" : "en-US"; rec.interimResults = false;
     mic.classList.add("live");
-    rec.onresult = (e) => { const s = e.results[0][0].transcript; $("#in").value = s; send(s); };
-    rec.onend = () => { mic.classList.remove("live"); rec = null; };
-    rec.onerror = () => { mic.classList.remove("live"); rec = null; };
+    rec.onresult = (e) => send(e.results[0][0].transcript);
+    rec.onend = rec.onerror = () => { mic.classList.remove("live"); rec = null; };
     rec.start();
   };
 }
 
-const nice = (id) => id.split(".")[1].replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-const parse = (l) => { const m = l.match(/^(\S+)(?: \((.*?)\))?=(.*)$/); return m ? { id: m[1], name: m[2] || nice(m[1]), st: m[3] } : { id: l, name: l, st: "" }; };
-async function loadHouse() {
-  const h = await fetch("api/house").then(r => r.json()).catch(() => null);
-  const el = $("#house"); if (!h) return el.innerHTML = `<div class="empty">${t("offline")}</div>`;
-  const room = (name, devices) => `<div class="room"><h3>${name}</h3>${devices.map(parse).map(d => {
-    const on = !/^(off|closed|locked|unavailable|idle|standby|disarmed|paused)/.test(d.st);
-    return `<div class="dev"><span>${d.name}</span><span class="st ${on ? "on" : ""}">${d.st}</span></div>`;
-  }).join("")}</div>`;
-  el.innerHTML = (h.rooms.map(r => room(r.room, r.devices)).join("") + (h.unassigned.length ? room(t("other"), h.unassigned) : "")) || `<div class="empty">${t("norooms")}</div>`;
-}
-async function loadFeed() {
-  const f = await fetch("api/feed").then(r => r.json()).catch(() => []);
-  const el = $("#feed");
-  el.innerHTML = `<button type="button" class="pill" id="briefBtn">${t("brief")}</button>` + (f.length ? f.map(i => `<div class="item"><div class="t">${new Date(i.t).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })} · ${i.who}</div><div class="q">${i.text}</div><div class="a">${plain(i.reply)}</div></div>`).join("") : `<div class="empty">${t("nothing")}</div>`);
-  $("#briefBtn").onclick = async () => { $("#briefBtn").textContent = t("writing"); const r = await fetch("api/brief", { headers: H }).then(r => r.json()).catch(() => ({ error: t("offline") })); el.insertAdjacentHTML("afterbegin", `<div class="brief"><small>Bina</small>${plain(r.brief || r.error)}</div>`); $("#briefBtn").textContent = t("brief"); };
+// ---------- activity ----------
+async function loadActivity() {
+  const [evs, feed, alerts] = await Promise.all([api("api/events").catch(() => []), api("api/feed").catch(() => []), api("api/alerts").catch(() => [])]);
+  const el = $("#activity");
+  el.innerHTML = `<p class="hello">${t("tAct")}</p>
+    <button class="alloff" id="briefBtn">${t("brief")}</button><div id="briefOut"></div>
+    ${alerts.length ? `<h2>${t("alerts")}</h2>` + alerts.slice(0, 10).map(a => `<div class="event"><div><div class="t">${when(a.t)}</div><div class="h">${esc(a.title)}</div><div class="d">${esc(a.message)}</div></div></div>`).join("") : ""}
+    <h2>${t("act")}</h2>${evs.length ? evs.map(eventRow).join("") : `<p class="empty">${t("noEvents")}</p>`}
+    <h2>${t("feed")}</h2>${feed.slice(0, 25).map(i => `<div class="event"><div><div class="t">${when(i.t)} · ${esc(i.who)}</div><div class="h">${esc(i.text)}</div><div class="d">${esc(plain(i.reply || ""))}</div></div></div>`).join("")}`;
+  $("#briefBtn").onclick = async () => { $("#briefBtn").textContent = t("writing"); const r = await api("api/brief").catch(() => ({ error: t("offline") })); $("#briefOut").innerHTML = `<div class="card">${esc(plain(r.brief || r.error))}</div>`; $("#briefBtn").textContent = t("brief"); };
 }
 
+// ---------- boot ----------
 (async () => {
-  try { const me = await fetch("api/me").then(r => r.json()); LANG = me.language || "en"; $("#houseName").textContent = me.house; } catch {}
+  try { const me = await api("api/me"); LANG = me.language === "en" ? "en" : "es"; $("#houseName").textContent = me.house; } catch {}
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-t]").forEach(n => n.textContent = t(n.dataset.t));
   $("#in").placeholder = t("ph");
-  $("#chips").innerHTML = t("chips").map(c => `<button type="button">${c}</button>`).join("");
-  $("#chips").querySelectorAll("button").forEach(b => b.onclick = () => send(b.textContent));
-  if (hist.length) hist.forEach(m => add(m.cls, m.text, false)); else add("bina", t("hi"));
+  if (hist.length) hist.forEach(m => add(m.cls, m.text, m.images || [], false));
+  else { add("bina", t("hi"), [], false); const tip = document.createElement("p"); tip.className = "tips"; tip.textContent = t("tips"); log.appendChild(tip); }
+  const start = new URLSearchParams(location.search).get("tab");
+  show(start === "talk" || start === "activity" ? start : "home");
 })();
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+setInterval(() => { if (!document.hidden && $("#home").classList.contains("on") && !$("#sheet").classList.contains("on")) loadHome(); }, 20000);
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>
 </html>

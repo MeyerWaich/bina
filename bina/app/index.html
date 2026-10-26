@@ -56,6 +56,26 @@
   .event .d{font-size:14px;line-height:1.35}
   .alert{background:#FBEAE9;color:var(--warn);border-radius:12px;padding:12px 14px;font-size:14px;margin-top:14px;line-height:1.4}
 
+  /* live */
+  .livehead{display:flex;align-items:center;gap:8px;margin:26px 0 2px}
+  .livehead h2{margin:0;font-size:20px;color:var(--ink);font-weight:700;letter-spacing:-.01em}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ink);opacity:.25}
+  .dot.on{opacity:1;animation:beat 2s ease-in-out infinite}
+  @keyframes beat{50%{opacity:.35}}
+  .sum{font-size:15px;color:var(--mute);margin-bottom:6px}
+  .cat{font-size:13px;font-weight:600;color:var(--mute);margin:16px 0 0}
+  .lrow{padding:12px 0;border-bottom:1px solid var(--rule)}
+  .lrow .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .lrow .nm{font-size:16px}
+  .lrow .sub{font-size:13px;color:var(--mute);margin-top:2px}
+  .lrow .lv{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;margin-left:auto;padding-right:4px}
+  .lrow input[type=range]{display:none;width:100%;margin:10px 0 2px;accent-color:#000;height:28px}
+  .lrow.open input[type=range]{display:block}
+  .lrow .top{cursor:pointer}
+  .more{font-size:14px;font-weight:600;padding:12px 0;text-decoration:underline}
+  .quiet{font-size:16px;color:var(--mute);padding:10px 0}
+  @media (prefers-reduced-motion:reduce){.dot.on{animation:none}}
+
   /* talk */
   #talk{padding-bottom:12px}
   .msg{max-width:86%;margin:0 0 12px;font-size:17px;line-height:1.4;white-space:pre-wrap}
@@ -139,7 +159,7 @@ const T = {
     tips: "Prueba: \"pon jazz en la piscina al 20\", \"¿hay alguna puerta abierta?\", \"modo cena es cocina al 60 y jazz suave\", \"¿quién vino hoy?\"",
     confirm: "¿Confirmas?", routine: "¿Agrego esta rutina?", cancel: "Cancelar", ok: "Confirmar", offline: "No llego a la casa. Revisa que estés en el WiFi o que Nabu Casa esté activo.",
     suggesting: "Pensando escenas para tu casa…", sugTitle: "Escenas para tu casa", add: "Agregar", added: "Agregado", close: "Cerrar", delQ: (n) => `¿Borrar "${n}"?`,
-    brief: "Resumen de hoy", writing: "Escribiendo…", alerts: "Avisos", act: "Timbre y cámaras", feed: "Conversación", sceneDone: (n) => `${n} listo`, sceneFail: (n) => `${n}: algo no respondió` },
+    brief: "Resumen de hoy", writing: "Escribiendo…", alerts: "Avisos", act: "Timbre y cámaras", feed: "Conversación", sceneDone: (n) => `${n} listo`, sceneFail: (n) => `${n}: algo no respondió`, now: "Ahora mismo", catL: "Iluminación", catA: "Audio", catV: "Video", catC: "Clima", catS: "Persianas", catO: "Otros", nothingOn: "Todo apagado. Nada sonando.", off: "Apagar", seeAllN: (n) => `Ver las ${n}`, nL: (n) => `${n} ${n === 1 ? "luz" : "luces"}`, nA: (n) => `${n} audio`, nV: (n) => `${n} ${n === 1 ? "tele" : "teles"}`, hvac: { cool: "Enfriando", heat: "Calentando", heat_cool: "Auto", auto: "Auto", off: "Apagado", dry: "Seco", fan_only: "Ventilador" }, to: "a", playingS: "sonando", pausedS: "en pausa", vol: "vol", muted: "silencio", openS: "abierta" },
   en: { tHome: "Home", tTalk: "Talk", tAct: "Activity", morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening",
     alarm: { disarmed: "Alarm off", armed_home: "Alarm armed home", armed_away: "Alarm armed away", armed_night: "Alarm armed night", triggered: "ALARM TRIGGERED", arming: "Alarm arming", pending: "Alarm pending" },
     closed: "Everything closed", open: (l) => `Open: ${l}`, unlocked: (l) => `Unlocked: ${l}`, inside: "inside",
@@ -148,7 +168,7 @@ const T = {
     tips: "Try: \"play jazz by the pool at 20\", \"is any door open?\", \"dinner mode is kitchen at 60 and soft jazz\", \"who came today?\"",
     confirm: "Confirm?", routine: "Add this routine?", cancel: "Cancel", ok: "Confirm", offline: "Can't reach the house. Check you're on the WiFi or that remote access is on.",
     suggesting: "Thinking of scenes for your house…", sugTitle: "Scenes for your house", add: "Add", added: "Added", close: "Close", delQ: (n) => `Remove "${n}"?`,
-    brief: "Today's brief", writing: "Writing…", alerts: "Alerts", act: "Doorbell and cameras", feed: "Conversation", sceneDone: (n) => `${n} done`, sceneFail: (n) => `${n}: something didn't respond` }
+    brief: "Today's brief", writing: "Writing…", alerts: "Alerts", act: "Doorbell and cameras", feed: "Conversation", sceneDone: (n) => `${n} done`, sceneFail: (n) => `${n}: something didn't respond`, now: "Right now", catL: "Lighting", catA: "Audio", catV: "Video", catC: "Climate", catS: "Shades", catO: "Other", nothingOn: "Everything off. Nothing playing.", off: "Turn off", seeAllN: (n) => `See all ${n}`, nL: (n) => `${n} ${n === 1 ? "light" : "lights"}`, nA: (n) => `${n} audio`, nV: (n) => `${n} TV`, hvac: { cool: "Cooling", heat: "Heating", heat_cool: "Auto", auto: "Auto", off: "Off", dry: "Dry", fan_only: "Fan" }, to: "to", playingS: "playing", pausedS: "paused", vol: "vol", muted: "muted", openS: "open" }
 };
 const t = (k) => (T[LANG] || T.es)[k];
 function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 2200); }
@@ -188,13 +208,14 @@ async function loadHome() {
     <p class="hello">${greet}, ${esc(h.user)}</p>
     <p class="status">${parts.join(". ")}.</p>
     ${al}
+    <div class="livehead"><span class="dot" id="liveDot"></span><h2>${t("now")}</h2></div>
+    <div id="live">${LIVE ? liveHTML(LIVE) : `<p class="quiet">…</p>`}</div>
     <div class="scenes">${scenes}<button class="scene add" id="suggest">${t("addScene")}</button></div>
     ${h.scenes.length ? `<p class="hint">${t("holdHint")}</p>` : ""}
-    ${playing ? `<h2>${t("playing")}</h2>${playing}` : ""}
     <h2>${t("rooms")}</h2>${rooms}
     <button class="alloff" id="alloff">${t("allOff")}</button>
     <h2>${t("recent")}</h2>${evs}`;
-  bindHome();
+  bindHome(); bindLive();
 }
 function eventRow(e) {
   return `<div class="event">${e.image ? `<img src="${esc(e.image)}" alt="" loading="lazy">` : ""}<div><div class="t">${when(e.t)}</div><div class="h">${esc(e.title)}</div><div class="d">${esc(e.text || "")}</div></div></div>`;
@@ -225,6 +246,69 @@ function bindHome() {
   $("#alloff").onclick = async () => { $("#alloff").textContent = "…"; await api("api/alloff", { method: "POST" }).catch(() => {}); toast(t("allOff")); setTimeout(loadHome, 1000); };
   $("#suggest").onclick = suggest;
 }
+
+// ---------- live status ----------
+let LIVE = null, showAllLights = false, dragging = false, es_ = null, pollT = null;
+function liveHTML(L) {
+  const sum = [];
+  if (L.lights.length) sum.push(t("nL")(L.lights.length));
+  if (L.audio.length) sum.push(t("nA")(L.audio.length));
+  if (L.video.length) sum.push(t("nV")(L.video.length));
+  const c = L.climate[0];
+  if (c && c.mode !== "off") sum.push(`${(t("hvac")[c.mode] || c.mode).toLowerCase()} ${t("to")} ${Math.round(c.target)}°`);
+  const where = (x) => [x.room, x.name !== x.room ? null : null].filter(Boolean)[0] || "";
+  const offBtn = (x, label) => `<button class="mini" data-off="${esc(x.id)}">${label || t("off")}</button>`;
+  let h = `<p class="sum">${sum.length ? sum.join(", ") : t("nothingOn")}</p>`;
+  if (L.lights.length) {
+    const list = showAllLights ? L.lights : L.lights.slice(0, 6);
+    h += `<p class="cat">${t("catL")}</p>` + list.map(x => `<div class="lrow" data-row="${esc(x.id)}"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")}</div></div>${x.level != null ? `<span class="lv">${x.level}%</span>` : ""}${offBtn(x)}</div>${x.level != null ? `<input type="range" min="1" max="100" value="${x.level}" data-level="${esc(x.id)}" aria-label="${esc(x.name)}">` : ""}</div>`).join("");
+    if (L.lights.length > 6 && !showAllLights) h += `<button class="more" id="moreLights">${t("seeAllN")(L.lights.length)}</button>`;
+  }
+  if (L.audio.length) h += `<p class="cat">${t("catA")}</p>` + L.audio.map(x => `<div class="lrow" data-row="${esc(x.id)}"><div class="top"><div><div class="nm">${esc(x.room || x.name)}</div><div class="sub">${esc([x.title, x.artist].filter(Boolean).join(", ") || x.source)}${x.state === "paused" ? " · " + t("pausedS") : ""}${x.muted ? " · " + t("muted") : ""}</div></div>${x.volume != null ? `<span class="lv">${x.volume}%</span>` : ""}${x.state === "playing" ? offBtn(x, t("pause")) : ""}</div>${x.volume != null ? `<input type="range" min="0" max="100" value="${x.volume}" data-level="${esc(x.id)}" aria-label="${esc(x.name)}">` : ""}</div>`).join("");
+  if (L.video.length) h += `<p class="cat">${t("catV")}</p>` + L.video.map(x => `<div class="lrow"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc([x.source, x.title].filter(Boolean).join(", ") || x.state)}</div></div>${offBtn(x)}</div></div>`).join("");
+  if (L.climate.length) h += `<p class="cat">${t("catC")}</p>` + L.climate.map(x => `<div class="lrow"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc(t("hvac")[x.mode] || x.mode)}${x.target != null && x.mode !== "off" ? ` ${t("to")} ${Math.round(x.target)}°` : ""}</div></div>${x.current != null ? `<span class="lv">${Math.round(x.current)}°</span>` : ""}</div></div>`).join("");
+  if (L.shades.length) h += `<p class="cat">${t("catS")}</p>` + L.shades.map(x => `<div class="lrow"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")} ${x.position != null ? x.position + "%" : ""}</div></div>${offBtn(x)}</div></div>`).join("");
+  if (L.other.length) h += `<p class="cat">${t("catO")}</p>` + L.other.map(x => `<div class="lrow"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")}</div></div>${offBtn(x)}</div></div>`).join("");
+  return h;
+}
+function renderLive(L) {
+  LIVE = L;
+  if (dragging) return;
+  const box = $("#live"); if (!box) return;
+  box.innerHTML = liveHTML(L); bindLive();
+  const d = $("#liveDot"); if (d) d.classList.add("on");
+  // keep the security sentence and room switches in step
+  if (HOME && L.security) {
+    const s = HOME.status; s.openings = L.security.open.map(x => x.name); s.locks = L.security.locks; if (L.security.alarm) s.alarm = L.security.alarm;
+  }
+}
+const openRows = new Set();
+function bindLive() {
+  document.querySelectorAll(".lrow[data-row]").forEach(r => { if (openRows.has(r.dataset.row)) r.classList.add("open"); r.querySelector(".top").onclick = (e) => { if (e.target.closest("button")) return; r.classList.toggle("open"); r.classList.contains("open") ? openRows.add(r.dataset.row) : openRows.delete(r.dataset.row); }; });
+  document.querySelectorAll("[data-off]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "…"; await api("api/off", { method: "POST", body: JSON.stringify({ entity_id: b.dataset.off }) }).catch(() => toast(t("offline"))); refreshLive(); });
+  document.querySelectorAll("input[data-level]").forEach(r => {
+    r.addEventListener("pointerdown", () => dragging = true); r.addEventListener("touchstart", () => dragging = true, { passive: true });
+    r.onchange = async () => { const lv = r.closest(".lrow").querySelector(".lv"); if (lv) lv.textContent = r.value + "%"; await api("api/level", { method: "POST", body: JSON.stringify({ entity_id: r.dataset.level, value: +r.value }) }).catch(() => {}); dragging = false; refreshLive(); };
+    r.oninput = () => { const lv = r.closest(".lrow").querySelector(".lv"); if (lv) lv.textContent = r.value + "%"; };
+    r.addEventListener("pointerup", () => setTimeout(() => dragging = false, 300));
+  });
+  const m = $("#moreLights"); if (m) m.onclick = () => { showAllLights = true; renderLive(LIVE); };
+}
+async function refreshLive() { try { renderLive(await api("api/live")); } catch {} }
+function startLive() {
+  refreshLive();
+  if (window.EventSource && !es_) {
+    try {
+      es_ = new EventSource("api/stream");
+      es_.onmessage = (e) => { try { renderLive(JSON.parse(e.data)); } catch {} };
+      es_.onerror = () => { const d = $("#liveDot"); if (d) d.classList.remove("on"); };
+    } catch {}
+  }
+  // safety net if the stream is blocked: poll every 5 s while the home tab is visible
+  clearInterval(pollT);
+  pollT = setInterval(() => { if (!document.hidden && $("#home").classList.contains("on")) refreshLive(); }, 5000);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshLive(); });
 
 // ---------- suggestions sheet ----------
 async function suggest() {
@@ -316,6 +400,7 @@ async function loadActivity() {
   else { add("bina", t("hi"), [], false); const tip = document.createElement("p"); tip.className = "tips"; tip.textContent = t("tips"); log.appendChild(tip); }
   const start = new URLSearchParams(location.search).get("tab");
   show(start === "talk" || start === "activity" ? start : "home");
+  startLive();
 })();
 setInterval(() => { if (!document.hidden && $("#home").classList.contains("on") && !$("#sheet").classList.contains("on")) loadHome(); }, 20000);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

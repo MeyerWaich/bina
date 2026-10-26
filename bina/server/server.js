@@ -9,7 +9,7 @@ import { tools } from "./tools.js";
 import { classify, roleAllows } from "./policy.js";
 import { icons } from "./icons.js";
 
-const VERSION = "0.3.1";
+const VERSION = "0.4.0";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOUSE_PATH = process.env.BINA_HOUSE || "./house.json";
 const MODEL = process.env.BINA_MODEL || "claude-sonnet-4-6";
@@ -377,11 +377,11 @@ async function monitorHealth() {
       if (offlineAlerted.delete(s.entity_id)) back.push(label);
     }
   }
-  if (down.length) await alertIntegrator(es() ? "equipos sin conexión" : "devices offline", down.join(", "));
-  if (back.length) await alertIntegrator(es() ? "equipos de vuelta" : "devices back online", back.join(", "));
+  if (down.length) await alertIntegrator(es() ? "Equipos sin conexión" : "Devices offline", down.join(", "));
+  if (back.length) await alertIntegrator(es() ? "Equipos de vuelta" : "Devices back online", back.join(", "));
   // batteries: any sensor with device_class battery under 20, once a day
   const low = Object.values(st).filter(s => s.attributes?.device_class === "battery" && !isNaN(+s.state) && +s.state < 20 && now - (batteryAlerted.get(s.entity_id) || 0) > 86400e3);
-  if (low.length) { low.forEach(s => batteryAlerted.set(s.entity_id, now)); await alertIntegrator(es() ? "batería baja" : "low battery", low.map(s => `${fname(s)} ${s.state}%`).join(", ")); }
+  if (low.length) { low.forEach(s => batteryAlerted.set(s.entity_id, now)); await alertIntegrator(es() ? "Batería baja" : "Low battery", low.map(s => `${fname(s)} ${s.state}%`).join(", ")); }
 }
 setInterval(() => monitorEvents().catch(e => console.error("events", e.message)), 5000);
 setInterval(() => monitorHealth().catch(e => console.error("health", e.message)), 120000);
@@ -453,6 +453,75 @@ app.post("/api/confirm/:id", wrap(async (req, res) => {
   }
   stateCache.at = 0;
   res.json({ ok: true, reply: user.language === "es" ? "Listo." : "Done." });
+}));
+
+// ---------- live status: everything that is on right now ----------
+const isTV = (s) => s.attributes?.device_class === "tv" || /\b(tv|tele|television|samsung|lg|sony)\b/i.test(fname(s) + " " + s.entity_id);
+async function liveStatus() {
+  const list = await exposedEntities();
+  const out = { lights: [], audio: [], video: [], climate: [], shades: [], other: [], security: { alarm: null, locks: [], open: [] } };
+  for (const { s, room } of list) {
+    const d = dom(s.entity_id), a = s.attributes || {}, base = { id: s.entity_id, name: fname(s), room };
+    if (d === "light" && s.state === "on") out.lights.push({ ...base, level: a.brightness != null ? Math.round(a.brightness / 2.55) : null });
+    else if (d === "media_player" && !["off", "standby", "unavailable", "unknown"].includes(s.state)) {
+      const item = { ...base, state: s.state, title: a.media_title || "", artist: a.media_artist || "", source: a.source || a.app_name || "", volume: a.volume_level != null ? Math.round(a.volume_level * 100) : null, muted: !!a.is_volume_muted };
+      if (isTV(s)) out.video.push(item); else if (s.state === "playing" || s.state === "paused" || s.state === "buffering") out.audio.push(item);
+    }
+    else if (d === "climate") out.climate.push({ ...base, mode: s.state, action: a.hvac_action || "", current: a.current_temperature, target: a.temperature ?? a.target_temp_low ?? null });
+    else if (d === "cover" && ["open", "opening", "closing"].includes(s.state)) out.shades.push({ ...base, state: s.state, position: a.current_position ?? null });
+    else if ((d === "fan" || d === "switch") && s.state === "on") out.other.push(base);
+    else if (d === "alarm_control_panel") out.security.alarm = { id: s.entity_id, state: s.state };
+    else if (d === "lock") out.security.locks.push({ ...base, state: s.state });
+    else if (d === "binary_sensor" && /^(door|window|opening|garage_door)$/.test(a.device_class || "") && s.state === "on") out.security.open.push(base);
+  }
+  const byRoom = (x, y) => String(x.room || "~").localeCompare(String(y.room || "~"));
+  out.lights.sort(byRoom); out.audio.sort(byRoom); out.video.sort(byRoom);
+  out.at = Date.now();
+  return out;
+}
+app.get("/api/live", wrap(async (_req, res) => { stateCache.at = 0; res.json(await liveStatus()); }));
+
+// server-sent events: push the live status whenever something changes
+const streams = new Set(); let lastLive = "";
+app.get("/api/stream", (req, res) => {
+  res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-Accel-Buffering": "no" });
+  res.flushHeaders?.(); res.write("retry: 3000\n\n");
+  streams.add(res); lastLive = "";
+  req.on("close", () => streams.delete(res));
+});
+setInterval(async () => {
+  if (!streams.size) return;
+  try {
+    stateCache.at = 0;
+    const live = await liveStatus(); const key = JSON.stringify({ ...live, at: 0 });
+    if (key === lastLive) { for (const r of streams) r.write(": ping\n\n"); return; }
+    lastLive = key; const msg = `data: ${JSON.stringify(live)}\n\n`;
+    for (const r of streams) r.write(msg);
+  } catch (e) { console.error("stream", e.message); }
+}, 2000);
+
+// turn one thing off (or pause a speaker)
+app.post("/api/off", wrap(async (req, res) => {
+  const id = String(req.body?.entity_id || ""); const d = dom(id);
+  const st = await states(); const s = st[id];
+  if (!s) return res.status(404).json({ error: "unknown" });
+  const allowed = (await exposedEntities({ includeNoisy: true })).some(x => x.s.entity_id === id);
+  if (!allowed) return res.status(403).json({ error: "not exposed" });
+  if (d === "light" || d === "switch" || d === "fan") await ha.call(d, "turn_off", { entity_id: id });
+  else if (d === "media_player") await ha.call("media_player", isTV(s) ? "turn_off" : "media_pause", { entity_id: id });
+  else if (d === "cover") await ha.call("cover", "close_cover", { entity_id: id });
+  else return res.status(400).json({ error: "not supported" });
+  stateCache.at = 0; lastLive = ""; audit({ user: userFrom(req).id, action: "off", entity: id });
+  res.json({ ok: true });
+}));
+app.post("/api/level", wrap(async (req, res) => {
+  const id = String(req.body?.entity_id || ""), v = Math.max(0, Math.min(100, Number(req.body?.value)));
+  const allowed = (await exposedEntities({ includeNoisy: true })).some(x => x.s.entity_id === id);
+  if (!allowed || isNaN(v)) return res.status(400).json({ error: "bad request" });
+  if (dom(id) === "light") await ha.call("light", v > 0 ? "turn_on" : "turn_off", v > 0 ? { entity_id: id, brightness_pct: v } : { entity_id: id });
+  else if (dom(id) === "media_player") await ha.call("media_player", "volume_set", { entity_id: id, volume_level: v / 100 });
+  else return res.status(400).json({ error: "not supported" });
+  stateCache.at = 0; lastLive = ""; res.json({ ok: true });
 }));
 
 // home screen data

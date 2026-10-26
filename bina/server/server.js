@@ -9,7 +9,7 @@ import { tools } from "./tools.js";
 import { classify, roleAllows } from "./policy.js";
 import { icons } from "./icons.js";
 
-const VERSION = "0.4.0";
+const VERSION = "0.4.1";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOUSE_PATH = process.env.BINA_HOUSE || "./house.json";
 const MODEL = process.env.BINA_MODEL || "claude-sonnet-4-6";
@@ -368,7 +368,8 @@ async function monitorHealth() {
   const st = await states();
   const now = Date.now(); const down = []; const back = [];
   for (const { s, room } of list) {
-    const label = `${fname(s)}${room ? " (" + room + ")" : ""}`;
+    if (isPersonal(s) || isNoise(s)) continue;
+    const label = `${cleanName(fname(s), room)}${room ? " (" + room + ")" : ""}`;
     if (s.state === "unavailable") {
       if (!offlineSince.has(s.entity_id)) offlineSince.set(s.entity_id, now);
       if (now - offlineSince.get(s.entity_id) > 10 * 60e3 && !offlineAlerted.has(s.entity_id)) { offlineAlerted.add(s.entity_id); down.push(label); }
@@ -456,12 +457,22 @@ app.post("/api/confirm/:id", wrap(async (req, res) => {
 }));
 
 // ---------- live status: everything that is on right now ----------
+// "Main Floor Kitchen Kitchen Downlights" (room Kitchen) -> "Downlights"
+function cleanName(name, room) {
+  let n = String(name || "").replace(/^(main|first|second|upper|lower|ground|1st|2nd|3rd)\s+floor\s+/i, "").replace(/^(planta (baja|alta)|primer piso|segundo piso)\s+/i, "");
+  if (room) { const r = room.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); let prev; do { prev = n; n = n.replace(new RegExp("^" + r + "\\s+", "i"), ""); } while (n !== prev); }
+  n = n.replace(/\b(\w+)\s+\1\b/gi, "$1").trim();
+  return n || name;
+}
+const isPersonal = (s) => /macbook|iphone|ipad|imac|android|pixel|galaxy|laptop/i.test(fname(s) + " " + s.entity_id);
+const isNoise = (s) => /keypad|_led\b| led\b|button|scene_controller/i.test(fname(s) + " " + s.entity_id);
 const isTV = (s) => s.attributes?.device_class === "tv" || /\b(tv|tele|television|samsung|lg|sony)\b/i.test(fname(s) + " " + s.entity_id);
 async function liveStatus() {
   const list = await exposedEntities();
   const out = { lights: [], audio: [], video: [], climate: [], shades: [], other: [], security: { alarm: null, locks: [], open: [] } };
   for (const { s, room } of list) {
-    const d = dom(s.entity_id), a = s.attributes || {}, base = { id: s.entity_id, name: fname(s), room };
+    const d = dom(s.entity_id), a = s.attributes || {}, base = { id: s.entity_id, name: cleanName(fname(s), room), room };
+    if (isNoise(s) || (d === "media_player" && isPersonal(s))) continue;
     if (d === "light" && s.state === "on") out.lights.push({ ...base, level: a.brightness != null ? Math.round(a.brightness / 2.55) : null });
     else if (d === "media_player" && !["off", "standby", "unavailable", "unknown"].includes(s.state)) {
       const item = { ...base, state: s.state, title: a.media_title || "", artist: a.media_artist || "", source: a.source || a.app_name || "", volume: a.volume_level != null ? Math.round(a.volume_level * 100) : null, muted: !!a.is_volume_muted };

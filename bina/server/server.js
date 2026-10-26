@@ -9,7 +9,7 @@ import { tools } from "./tools.js";
 import { classify, roleAllows } from "./policy.js";
 import { icons } from "./icons.js";
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOUSE_PATH = process.env.BINA_HOUSE || "./house.json";
 const MODEL = process.env.BINA_MODEL || "claude-sonnet-4-6";
@@ -412,16 +412,19 @@ setInterval(async () => {
 
 // ---------- suggestions ----------
 async function suggestScenes(user) {
-  const m = await houseModel();
+  const list = await exposedEntities();
+  const useful = list.filter(x => ["light", "cover", "climate", "media_player", "fan", "switch"].includes(dom(x.s.entity_id)));
+  const inv = useful.map(x => `${x.s.entity_id} | ${fname(x.s)} | ${x.room || "-"}`).join("\n");
+  const rooms = [...new Set(useful.filter(x => dom(x.s.entity_id) === "media_player").map(x => x.room).filter(Boolean))];
+  const action = { type: "object", properties: { domain: { type: "string" }, service: { type: "string" }, entity_ids: { type: "array", items: { type: "string" } }, data: { type: "object" }, music: { type: "object", properties: { query: { type: "string" }, room: { type: "string" }, volume_pct: { type: "number" } } } } };
+  const tool = { name: "scenes", description: "Return the proposed scenes", input_schema: { type: "object", properties: { scenes: { type: "array", items: { type: "object", properties: { name: { type: "string" }, summary: { type: "string" }, actions: { type: "array", items: action } }, required: ["name", "summary", "actions"] } } }, required: ["scenes"] } };
   const r = await anthropic.messages.create({
-    model: MODEL, max_tokens: 2500,
-    system: "You design home scenes. Output only JSON, no prose.",
-    messages: [{ role: "user", content: `House: ${JSON.stringify(m)}\n\nPropose 6 useful scenes for this exact house in ${user.language === "es" ? "Spanish" : "English"} (for example morning, movie night, dinner, relax, leaving, good night), skipping any that already exist: ${house.scenes.map(s => s.name).join(", ") || "none"}. Use only entity ids listed above. Lights: light.turn_on with data.brightness_pct or light.turn_off. Shades: cover.open_cover/close_cover. Climate: climate.set_temperature. Speakers: use {"music":{"query":"...","room":"<room name>","volume_pct":20}} or media_player.media_pause. Never include locks, alarm or cameras. Short names (1 or 2 words). Return JSON array: [{"name":"...","summary":"one short line","actions":[{"domain":"light","service":"turn_on","entity_ids":["light.x"],"data":{"brightness_pct":30}}]}]` }]
+    model: MODEL, max_tokens: 8000, tools: [tool], tool_choice: { type: "tool", name: "scenes" },
+    messages: [{ role: "user", content: `Devices (entity_id | name | room):\n${inv}\nRooms with speakers: ${rooms.join(", ") || "none"}\n\nPropose 6 useful scenes for this exact house, names and summaries in ${user.language === "es" ? "Spanish" : "English"} (morning, movie night, dinner, relax, leaving, good night or similar), skipping existing ones: ${house.scenes.map(s => s.name).join(", ") || "none"}. Group lights per scene into as few actions as possible (one light.turn_on action with several entity_ids and data.brightness_pct, one light.turn_off action). Shades: cover.open_cover / cover.close_cover. Climate: climate.set_temperature with data.temperature. Music: an action with only music {query, room, volume_pct} using a room with speakers. Never locks, alarm or cameras. Names: 1 or 2 words. Summary: one short line.` }]
   });
-  const txt = r.content.find(c => c.type === "text")?.text || "[]";
-  const json = txt.slice(txt.indexOf("["), txt.lastIndexOf("]") + 1);
-  const known = new Set((await exposedEntities({ includeNoisy: true })).map(x => x.s.entity_id));
-  return JSON.parse(json).map(s => ({ ...s, actions: (s.actions || []).filter(a => a.music || ((a.entity_ids || []).length && a.entity_ids.every(id => known.has(id)) && !["lock", "alarm_control_panel", "camera"].includes(a.domain))) })).filter(s => s.actions.length);
+  const out = r.content.find(c => c.type === "tool_use")?.input?.scenes || [];
+  const known = new Set(list.map(x => x.s.entity_id));
+  return out.map(s => ({ ...s, actions: (s.actions || []).filter(a => (a.music && a.music.query) || (a.domain && (a.entity_ids || []).length && a.entity_ids.every(id => known.has(id)) && !["lock", "alarm_control_panel", "camera"].includes(a.domain))).map(a => a.music && a.music.query ? { music: a.music } : { domain: a.domain, service: a.service, entity_ids: a.entity_ids, data: a.data || {} }) })).filter(s => s.actions.length);
 }
 
 // ---------- routes ----------

@@ -9,7 +9,7 @@ import { tools } from "./tools.js";
 import { classify, roleAllows } from "./policy.js";
 import { icons } from "./icons.js";
 
-const VERSION = "0.4.1";
+const VERSION = "0.4.2";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOUSE_PATH = process.env.BINA_HOUSE || "./house.json";
 const MODEL = process.env.BINA_MODEL || "claude-sonnet-4-6";
@@ -34,7 +34,7 @@ const house = JSON.parse(fs.readFileSync(HOUSE_PATH, "utf8"));
 house.memory ||= []; house.preferences ||= []; house.protected ||= []; house.scenes ||= [];
 const saveHouse = () => fs.writeFileSync(HOUSE_PATH, JSON.stringify(house, null, 2));
 const FEED_PATH = path.join(DATA, "feed.json"), EVENTS_PATH = path.join(DATA, "events.json"), ALERTS_PATH = path.join(DATA, "alerts.json");
-let feed = readJson(FEED_PATH, []), events = readJson(EVENTS_PATH, []), alerts = readJson(ALERTS_PATH, []);
+let feed = readJson(FEED_PATH, []), events = readJson(EVENTS_PATH, []), alerts = readJson(ALERTS_PATH, []).filter(a => !/macbook|iphone|ipad|imac/i.test(a.message || ""));
 const pushFeed = (item) => { feed.unshift(item); feed = feed.slice(0, 200); fs.writeFile(FEED_PATH, JSON.stringify(feed), () => {}); };
 const pushEvent = (item) => { events.unshift(item); events = events.slice(0, 150); fs.writeFile(EVENTS_PATH, JSON.stringify(events), () => {}); };
 const pushAlert = (item) => { alerts.unshift(item); alerts = alerts.slice(0, 100); fs.writeFile(ALERTS_PATH, JSON.stringify(alerts), () => {}); };
@@ -480,6 +480,7 @@ async function liveStatus() {
     }
     else if (d === "climate") out.climate.push({ ...base, mode: s.state, action: a.hvac_action || "", current: a.current_temperature, target: a.temperature ?? a.target_temp_low ?? null });
     else if (d === "cover" && ["open", "opening", "closing"].includes(s.state)) out.shades.push({ ...base, state: s.state, position: a.current_position ?? null });
+    else if (d === "switch" && s.state === "on" && /light|lamp|cabinet|uplight|downlight|sconce|pendant|chandelier|strip|luz|lampara/i.test(fname(s))) out.lights.push({ ...base, level: null });
     else if ((d === "fan" || d === "switch") && s.state === "on") out.other.push(base);
     else if (d === "alarm_control_panel") out.security.alarm = { id: s.entity_id, state: s.state };
     else if (d === "lock") out.security.locks.push({ ...base, state: s.state });

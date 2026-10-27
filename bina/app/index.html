@@ -95,7 +95,7 @@
   .m-dinner{background:radial-gradient(90% 80% at 50% 30%,#FFB45C 0%,#B4511E 40%,#3A160A 75%,#160A06 100%)}
   .m-relax{background:radial-gradient(100% 80% at 70% 10%,#C8B3F0 0%,#6F55A8 40%,#2A1F45 75%,#141019 100%)}
   .m-away{background:linear-gradient(160deg,#AEB8C2 0%,#5B6773 45%,#1C2126 100%)}
-  .m-night{background:radial-gradient(28px 28px at 78% 18%,#F4F1E6 0 45%,transparent 50%),radial-gradient(110% 90% at 50% 0%,#2C3C7A 0%,#141B3C 50%,#090B16 100%)}
+  .m-night{background:radial-gradient(28px 28px at 64% 30%,#F4F1E6 0 45%,transparent 50%),radial-gradient(110% 90% at 50% 0%,#2C3C7A 0%,#141B3C 50%,#090B16 100%)}
   .m-party{background:radial-gradient(90% 70% at 20% 10%,#FF6B9D 0%,transparent 60%),radial-gradient(90% 70% at 85% 30%,#8A4DFF 0%,transparent 60%),#1A0E2A}
   .m-focus{background:linear-gradient(170deg,#F6F7F2 0%,#AFC2D3 45%,#2B3642 100%)}
   .m-default{background:linear-gradient(165deg,#7D848E 0%,#3A3F47 50%,#16181B 100%)}
@@ -190,6 +190,84 @@
   .np .ctl{display:flex;gap:6px;margin-left:auto}
   .np .ctl button{width:44px;height:44px;border-radius:50%;background:var(--glass2);display:grid;place-items:center}
 
+
+  /* compact hero so the whole home fits on one screen */
+  .hero.compact{min-height:calc(150px + var(--safe-t));padding:calc(58px + var(--safe-t)) 18px 12px}
+  .m-sky{background:radial-gradient(20px 20px at 58% 22%,rgba(244,241,230,.9) 0 45%,transparent 52%),radial-gradient(110% 90% at 50% 0%,#2C3C7A 0%,#141B3C 50%,#090B16 100%)}
+  .live .lrow{padding:9px 0}
+  .live .lrow .ic{width:32px;height:32px}
+  .live .more{padding:9px 0 6px}
+  .live .livesum{padding:10px 0 8px}
+  .alert{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:10px 14px;margin-bottom:10px}
+  .hero.compact + .alert{margin-top:0}
+  .hero.compact .hello{font-size:30px}
+  .hero.compact .status{font-size:15px}
+  h2.sec .view{display:inline-flex;align-items:center;gap:6px;font-family:var(--body);font-size:13px;font-weight:600;color:var(--mute);letter-spacing:0;padding:7px 12px;border-radius:999px;background:var(--glass)}
+  h2.sec .view svg.i{width:16px;height:16px}
+  h2.sec.tight{margin-top:22px;margin-bottom:10px}
+
+  /* scene orbs: each scene is a sphere of its own light */
+  .orbs{display:flex;gap:14px;overflow-x:auto;padding:4px 18px 6px;scrollbar-width:none;scroll-snap-type:x proximity}
+  .orbs::-webkit-scrollbar{display:none}
+  .orb{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:7px;scroll-snap-align:start;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .orb .ball{position:relative;width:64px;height:64px;border-radius:50%;background-size:cover;background-position:center;box-shadow:inset 0 -10px 18px rgba(0,0,0,.35),inset 0 6px 14px rgba(255,255,255,.18),0 6px 18px -6px rgba(0,0,0,.6);transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .3s}
+  .orb .ball::after{content:"";position:absolute;inset:6px 14px auto 14px;height:16px;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,0));filter:blur(1px)}
+  .orb:active .ball{transform:scale(.9)}
+  .orb .lbl{font-size:12.5px;font-weight:500;text-align:center;line-height:1.2;color:rgba(243,243,241,.86);max-width:76px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .orb.active .ball{box-shadow:0 0 0 2.5px var(--bg),0 0 0 4.5px var(--warm),0 0 26px 2px rgba(255,212,154,.55),inset 0 -10px 18px rgba(0,0,0,.35)}
+  .orb.active .lbl{color:var(--warm);font-weight:600}
+  .orb .ring{position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--warm);opacity:0;transform:scale(1);pointer-events:none}
+  .orb.run .ring{animation:ripple .7s ease-out}
+  @keyframes ripple{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.7)}}
+  .orb.new .ball{background:var(--glass);border:1.5px dashed rgba(255,255,255,.22);box-shadow:none;display:grid;place-items:center;color:var(--mute)}
+  .orb.new .ball::after{display:none}
+
+  /* compact room tiles */
+  .tiles{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;grid-auto-columns:calc((100% - 36px - 16px) / 2.6);gap:8px;padding:0 18px 2px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;scroll-padding:0 18px}
+  .tiles::-webkit-scrollbar{display:none}
+  .tile{scroll-snap-align:start}
+  .tile.more{align-items:center;justify-content:center;color:var(--mute);font-weight:600;font-size:15px}
+  .tile{position:relative;overflow:hidden;border-radius:16px;padding:9px 10px;min-height:60px;text-align:left;background:var(--glass);border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;isolation:isolate}
+  .tile.lit{background:radial-gradient(120% 120% at 0% 0%,rgba(255,212,154,.38) 0%,rgba(255,212,154,.08) 55%,rgba(255,255,255,.04) 100%);border-color:rgba(255,212,154,.28)}
+  .tile .nm{font-size:14px;font-weight:600;line-height:1.15;padding-right:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .tile .st{font-size:11.5px;color:var(--mute);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile.lit .st{color:rgba(255,226,186,.9)}
+  .tile .glyphs{position:absolute;top:8px;right:8px;display:flex;gap:3px;color:var(--warm)}
+  .tile .glyphs svg.i{width:13px;height:13px}
+  @media (min-width:700px){.tiles{grid-auto-columns:calc((100% - 36px - 40px) / 6)}}
+
+  /* view transitions: orbs morph into cards, tiles into photo cards */
+  ::view-transition-old(root),::view-transition-new(root){animation-duration:.35s}
+  ::view-transition-group(*){animation-duration:.42s;animation-timing-function:cubic-bezier(.2,.8,.2,1)}
+
+  /* scene editor */
+  .ed-room{margin-top:12px;border-radius:var(--r-lg);background:var(--glass);border:1px solid var(--line);overflow:hidden}
+  .ed-room > summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;font-weight:600;font-size:16px;cursor:pointer}
+  .ed-room > summary::-webkit-details-marker{display:none}
+  .ed-room > summary .cnt{font-size:13px;font-weight:600;color:var(--warmText);background:var(--warm);border-radius:999px;padding:3px 9px}
+  .ed-room > summary .cnt.zero{background:var(--glass2);color:var(--mute)}
+  .ed-room > summary svg.i{transition:transform .2s;color:var(--mute)}
+  .ed-room[open] > summary svg.i{transform:rotate(180deg)}
+  .ed-body{padding:0 14px 8px}
+  .ed-dev{padding:10px 0;border-top:1px solid var(--line)}
+  .ed-dev .top{display:flex;align-items:center;gap:12px}
+  .ed-dev .chk{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.3);flex:none;display:grid;place-items:center}
+  .ed-dev.on .chk{background:var(--warm);border-color:var(--warm);color:var(--warmText)}
+  .ed-dev .chk svg.i{width:15px;height:15px;opacity:0}
+  .ed-dev.on .chk svg.i{opacity:1}
+  .ed-dev .nm{flex:1;font-size:15.5px;display:flex;align-items:center;gap:8px;min-width:0}
+  .ed-dev .nm svg.i{width:17px;height:17px;color:var(--mute)}
+  .ed-dev.on .nm svg.i{color:var(--warm)}
+  .ed-dev .sum{font-size:13px;color:var(--mute)}
+  .ed-dev .ctl{display:none;padding:8px 0 2px 38px}
+  .ed-dev.on .ctl{display:block}
+  .seg.mini{margin-top:0}
+  .seg.mini button{padding:9px 0;font-size:14px}
+  .seg button[aria-pressed=true]{background:var(--warm);color:var(--warmText)}
+  .ed-dev .slider{height:40px;margin-top:8px}
+  .ed-dev .field{margin-top:0;font-size:15px;padding:11px 14px}
+  .stick{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(26,28,32,0),var(--bg2) 30%);padding:18px 18px calc(4px + var(--safe-b));margin-top:8px}
+
   /* talk */
   #talk{padding:calc(16px + var(--safe-t)) 18px 12px}
   .ttl{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-.03em;margin:8px 0 14px}
@@ -280,6 +358,10 @@ const P = {
   camera: '<path d="M3.5 8.5a1 1 0 0 1 1-1h3l1.5-2h6l1.5 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><circle cx="12" cy="13" r="3.5"/>',
   switch: '<rect x="7" y="3.5" width="10" height="17" rx="2"/><path d="M12 7.5v4"/>',
   edit: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/>',
+  grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  dots: '<circle cx="6" cy="12" r="3"/><circle cx="13.5" cy="12" r="3"/><circle cx="20" cy="12" r="2"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5" stroke-width="2.4"/>',
+  chev: '<path d="m6 9 6 6 6-6"/>',
   trash: '<path d="M4.5 6.5h15M9 6.5V4.5h6v2M6.5 6.5l1 13.5h9l1-13.5"/>'
 };
 const ic = (n, cls = "i") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || P.scene}</svg>`;
@@ -309,7 +391,7 @@ const T = {
     openS: "Abrir", closeS: "Cerrar", stop: "Parar", openState: "Abierta", closedState: "Cerrada", locked: "Con llave", unlockedS: "Sin llave",
     ph: "Dile a Bina…", hi: "Hola. Pídeme lo que quieras para la casa.", tips: "Prueba: \"pon jazz en la piscina al 20\", \"¿hay alguna puerta abierta?\", \"modo cena es cocina al 60 y jazz suave\", \"¿quién vino hoy?\"",
     confirm: "¿Confirmas?", routine: "¿Agrego esta rutina?", offline: "No llego a la casa. Revisa el WiFi o que el acceso remoto esté activo.",
-    brief: "Resumen de hoy", writing: "Escribiendo…", alerts: "Avisos", act: "Timbre y cámaras", feed: "Conversación", noEvents: "Sin novedades.", upload: "Subiendo foto…", noDevices: "No hay equipos en este cuarto." },
+    brief: "Resumen de hoy", writing: "Escribiendo…", alerts: "Avisos", act: "Timbre y cámaras", feed: "Conversación", noEvents: "Sin novedades.", upload: "Subiendo foto…", noDevices: "No hay equipos en este cuarto.", edit: "Editar", fromScratch: "Crear desde cero", fromScratchSub: "Eliges cuarto por cuarto qué se prende, a qué nivel, música y clima.", fillNow: "Llenar con la casa ahora", editTitle: "Editar escena", newTitle: "Nueva escena", nothingSel: "Elige al menos una cosa.", cards: "Tarjetas", bubbles: "Burbujas", tiles: "Mosaico", photos: "Fotos", selected: (n) => `${n}`, onW: "Prender", offW: "Apagar", song: "Canción, artista, playlist o género", pauseW: "Pausar", playW: "Poner música", temp: "Temperatura", posW: "Posición" },
   en: { tHome: "Home", tTalk: "Talk", tAct: "Activity", morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening",
     alarm: { disarmed: "Alarm off", armed_home: "Alarm armed home", armed_away: "Alarm armed away", armed_night: "Alarm armed night", triggered: "ALARM TRIGGERED", arming: "Alarm arming", pending: "Alarm pending" },
     closed: "Everything closed", open: (l) => `Open: ${l}`, unlocked: (l) => `Unlocked: ${l}`, inside: "inside",
@@ -325,7 +407,7 @@ const T = {
     openS: "Open", closeS: "Close", stop: "Stop", openState: "Open", closedState: "Closed", locked: "Locked", unlockedS: "Unlocked",
     ph: "Tell Bina…", hi: "Hi. Ask me for anything in the house.", tips: "Try: \"play jazz by the pool at 20\", \"is any door open?\", \"dinner mode is kitchen at 60 and soft jazz\", \"who came today?\"",
     confirm: "Confirm?", routine: "Add this routine?", offline: "Can't reach the house. Check the WiFi or remote access.",
-    brief: "Today's brief", writing: "Writing…", alerts: "Alerts", act: "Doorbell and cameras", feed: "Conversation", noEvents: "Nothing new.", upload: "Uploading photo…", noDevices: "No devices in this room." }
+    brief: "Today's brief", writing: "Writing…", alerts: "Alerts", act: "Doorbell and cameras", feed: "Conversation", noEvents: "Nothing new.", upload: "Uploading photo…", noDevices: "No devices in this room.", edit: "Edit", fromScratch: "Build from scratch", fromScratchSub: "Pick room by room what turns on, at what level, music and climate.", fillNow: "Fill with the house now", editTitle: "Edit scene", newTitle: "New scene", nothingSel: "Pick at least one thing.", cards: "Cards", bubbles: "Bubbles", tiles: "Tiles", photos: "Photos", selected: (n) => `${n}`, onW: "On", offW: "Off", song: "Song, artist, playlist or genre", pauseW: "Pause", playW: "Play music", temp: "Temperature", posW: "Position" }
 };
 const t = (k) => (T[LANG] || T.es)[k];
 function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 2200); }
@@ -345,6 +427,12 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.da
 
 // ---------- home ----------
 let HOME = null, LIVE = null, liveExpanded = false;
+const VIEW = (() => { try { return { scenes: "orbs", rooms: "tiles", ...JSON.parse(localStorage.getItem("bina_view") || "{}") }; } catch { return { scenes: "orbs", rooms: "tiles" }; } })();
+function setView(kind, val) {
+  const apply = () => { VIEW[kind] = val; try { localStorage.setItem("bina_view", JSON.stringify(VIEW)); } catch {} renderHome(); };
+  buzz(8);
+  if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) document.startViewTransition(apply); else apply();
+}
 async function loadHome() {
   let h; try { h = await api("api/home"); } catch { $("#home").innerHTML = `<div class="hero"><p class="hello">Bina</p><p class="status">${t("offline")}</p></div>`; return; }
   HOME = h; renderHome();
@@ -362,29 +450,29 @@ function renderHome() {
   const h = HOME;
   const hr = new Date().getHours();
   const greet = hr < 12 ? t("morning") : hr < 19 ? t("afternoon") : t("evening");
-  const heroBg = h.homePhoto ? `<div class="bgimg" ${bgStyle(h.homePhoto)}></div>` : `<div class="bgimg m-${hr < 7 || hr >= 19 ? "night" : hr < 12 ? "morning" : "away"}"></div>`;
+  const heroBg = h.homePhoto ? `<div class="bgimg" ${bgStyle(h.homePhoto)}></div>` : `<div class="bgimg m-${hr < 7 || hr >= 19 ? "sky" : hr < 12 ? "morning" : "away"}"></div>`;
   const al = (h.alerts || []).map(a => `<div class="alert"><b>${esc(a.title)}</b> ${esc(a.message)}</div>`).join("");
   $("#home").innerHTML = `
-    <div class="hero">${heroBg}
+    <div class="hero compact">${heroBg}
       <div class="topbar"><span class="wordmark">BINA</span><button class="iconbtn" id="homePhotoBtn" aria-label="${t("homePhoto")}">${ic("image")}</button></div>
       <p class="hello">${greet}, ${esc(h.user)}</p>
       <p class="status" id="statusLine">${statusLine()}</p>
     </div>
     ${al}
     <div class="glass live" id="live">${LIVE ? liveHTML(LIVE) : `<p class="quiet">…</p>`}</div>
-    <h2 class="sec">${t("scenes")}</h2>
-    <div class="scenes" id="scenes">${scenesHTML(h.scenes)}</div>
-    <h2 class="sec">${t("rooms")}</h2>
-    <div class="rooms" id="rooms">${roomsHTML(h.roomCards || [])}</div>
-    <button class="bigbtn" id="alloff">${ic("power")} ${t("allOff")}</button>
+    <h2 class="sec tight">${t("scenes")}<button class="view" id="sceneView">${VIEW.scenes === "orbs" ? ic("grid") + t("cards") : ic("dots") + t("bubbles")}</button></h2>
+    <div id="scenesBox">${VIEW.scenes === "orbs" ? `<div class="orbs">${orbsHTML(h.scenes)}</div>` : `<div class="scenes">${scenesHTML(h.scenes)}</div>`}</div>
+    <h2 class="sec tight">${t("rooms")}<button class="view" id="roomView">${VIEW.rooms === "tiles" ? ic("image") + t("photos") : ic("grid") + t("tiles")}</button></h2>
+    <div id="roomsBox">${roomsBlock(h.roomCards || [])}</div>
+    <button class="bigbtn" id="alloff" style="margin-top:14px">${ic("power")} ${t("allOff")}</button>
     ${h.events?.length ? `<h2 class="sec">${t("recent")}</h2><div class="glass list">${h.events.map(eventRow).join("")}</div>` : ""}`;
   bindHome();
 }
 
 // scene cards: what each one does, in icons and a few words
 function scenesHTML(list) {
-  const cards = list.map(sc => `
-    <button class="scene${sc.active ? " active" : ""}" data-id="${esc(sc.id)}" data-name="${esc(sc.name)}" aria-label="${esc(sc.name)}">
+  const cards = list.map((sc, i) => `
+    <button class="scene${sc.active ? " active" : ""}" data-id="${esc(sc.id)}" data-name="${esc(sc.name)}" aria-label="${esc(sc.name)}" style="view-transition-name:sc-${i}">
       <div class="bg ${sc.photo ? "" : "m-" + esc(sc.mood)}" ${bgStyle(sc.photo)}></div>
       <span class="tag">${t("active")}</span>
       <span class="info" data-info="${esc(sc.id)}" role="button" aria-label="${t("whatDoes")}">${ic("info")}</span>
@@ -392,8 +480,27 @@ function scenesHTML(list) {
       <span class="does">${(sc.parts || []).slice(0, 3).map(p => `<span>${ic(p.kind === "lightoff" ? "lightoff" : p.kind)}${esc(p.text)}</span>`).join("")}</span>
       <span class="flash"></span>
     </button>`).join("");
-  return cards + `<button class="scene new" id="newScene">${ic("plus")}<span class="nm">${t("newScene")}</span></button>`;
+  return cards + `<button class="scene new" id="newScene" style="view-transition-name:sc-new">${ic("plus")}<span class="nm">${t("newScene")}</span></button>`;
 }
+// bubbles: one sphere of light per scene
+function orbsHTML(list) {
+  return list.map((sc, i) => `<button class="orb${sc.active ? " active" : ""}" data-id="${esc(sc.id)}" data-name="${esc(sc.name)}" aria-label="${esc(sc.name)}">
+      <span class="ball ${sc.photo ? "" : "m-" + esc(sc.mood)}" style="view-transition-name:sc-${i}${sc.photo ? `;background-image:url('${esc(sc.photo)}')` : ""}"><span class="ring"></span></span>
+      <span class="lbl">${esc(sc.name)}</span></button>`).join("")
+    + `<button class="orb new" id="newScene"><span class="ball" style="view-transition-name:sc-new">${ic("plus")}</span><span class="lbl">${t("newScene")}</span></button>`;
+}
+function roomsBlock(list) { return VIEW.rooms === "tiles" ? `<div class="tiles">${tilesHTML(list)}</div>` : `<div class="rooms">${roomsHTML(list)}</div>`; }
+let allTiles = false;
+function tilesHTML(full) {
+  const list = full; const more = "";
+  return list.map((r, i) => {
+    const lit = r.lightsOn > 0;
+    const st = r.lights ? (lit ? `${r.lightsOn}/${r.lights} ${LANG === "es" ? "luces" : "lights"}` : (LANG === "es" ? "Apagado" : "Off")) : (r.temp != null ? r.temp + "°" : "");
+    const g = (r.playing ? ic("music") : "") + (r.tvOn ? ic("tv") : "") + (r.open ? ic("door") : "");
+    return `<button class="tile${lit ? " lit" : ""}" data-room="${esc(r.room)}" style="view-transition-name:rm-${i}"><span class="glyphs">${g}</span><span class="nm">${esc(r.room)}</span><span class="st">${esc(st)}</span></button>`;
+  }).join("") + more;
+}
+document.addEventListener("click", (e) => { if (e.target.closest("#moreTiles")) { allTiles = true; const box = $("#roomsBox"); const list = LIVE?.rooms || HOME?.roomCards || []; const go = () => { box.innerHTML = roomsBlock(list); box.querySelectorAll("[data-room]").forEach(b => b.onclick = () => openRoom(b.dataset.room)); }; document.startViewTransition ? document.startViewTransition(go) : go(); } });
 function roomsHTML(list) {
   return list.map(r => {
     const bits = [];
@@ -403,7 +510,7 @@ function roomsHTML(list) {
     if (r.temp != null) bits.push(r.temp + "°");
     if (r.open) bits.push(t("openN")(r.open));
     const lit = r.lightsOn > 0;
-    return `<button class="room" data-room="${esc(r.room)}">
+    return `<button class="room" data-room="${esc(r.room)}" style="view-transition-name:rm-${list.indexOf(r)}">
       <div class="bg ${r.photo ? "" : lit ? "r-on" : "r-off"}" ${bgStyle(r.photo)}></div>
       <span class="lit${lit ? " on" : ""}">${ic("light")}</span>
       <span class="nm">${esc(r.room)}</span><span class="st">${esc(bits.filter(Boolean).join(" · "))}</span>
@@ -414,7 +521,7 @@ function eventRow(e) {
   return `<div class="event">${e.image ? `<img src="${esc(e.image)}" alt="" loading="lazy">` : ""}<div><div class="t">${when(e.t)}</div><div class="h">${esc(e.title)}</div><div class="d">${esc(e.text || "")}</div></div></div>`;
 }
 function bindHome() {
-  document.querySelectorAll(".scene[data-id]").forEach(b => {
+  document.querySelectorAll(".scene[data-id], .orb[data-id]").forEach(b => {
     let timer = null, long = false;
     const start = () => { long = false; timer = setTimeout(() => { long = true; buzz(20); openScene(b.dataset.id); }, 550); };
     const end = () => clearTimeout(timer);
@@ -426,16 +533,18 @@ function bindHome() {
       if (e.target.closest("[data-info]")) { openScene(b.dataset.id); return; }
       const r0 = b.getBoundingClientRect(); b.style.setProperty("--x", ((e.clientX || r0.left + r0.width / 2) - r0.left) + "px"); b.style.setProperty("--y", ((e.clientY || r0.top + r0.height / 2) - r0.top) + "px");
       b.classList.add("run"); buzz();
-      setTimeout(() => b.classList.remove("run"), 450);
+      setTimeout(() => b.classList.remove("run"), 700);
       let r; try { r = await post(`api/scene/${encodeURIComponent(b.dataset.id)}`); } catch { r = { ok: false }; }
-      document.querySelectorAll(".scene.active").forEach(x => x.classList.remove("active")); b.classList.add("active");
+      document.querySelectorAll(".scene.active, .orb.active").forEach(x => x.classList.remove("active")); b.classList.add("active");
       toast(r.ok ? t("sceneDone")(b.dataset.name) : t("sceneFail")(b.dataset.name));
       if (r.confirmations?.length) { show("talk"); r.confirmations.forEach(confirmCard); }
       setTimeout(refreshLive, 1500);
     };
   });
   $("#newScene").onclick = newSceneSheet;
-  document.querySelectorAll(".room[data-room]").forEach(b => b.onclick = () => openRoom(b.dataset.room));
+  document.querySelectorAll("[data-room]").forEach(b => b.onclick = () => openRoom(b.dataset.room));
+  $("#sceneView").onclick = () => setView("scenes", VIEW.scenes === "orbs" ? "cards" : "orbs");
+  $("#roomView").onclick = () => setView("rooms", VIEW.rooms === "tiles" ? "photos" : "tiles");
   $("#alloff").onclick = async () => { buzz(); await post("api/alloff").catch(() => {}); toast(t("allLightsOff")); setTimeout(refreshLive, 800); };
   $("#homePhotoBtn").onclick = () => pickPhoto("home", "main", loadHome);
   bindLive();
@@ -456,9 +565,9 @@ function liveHTML(L) {
   L.shades.forEach(x => rows.push(`<div class="lrow"><span class="ic">${ic("shade")}</span><div class="tx"><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")}</div></div>${x.position != null ? `<span class="val">${x.position}%</span>` : ""}<button class="pillbtn" data-act="close" data-id="${esc(x.id)}">${t("closeS")}</button></div>`));
   L.climate.forEach(x => rows.push(`<div class="lrow"><span class="ic">${ic("climate")}</span><div class="tx"><div class="nm">${esc(x.name)}</div><div class="sub">${esc(t("hvac")[x.mode] || x.mode)}${x.target != null && x.mode !== "off" ? ` ${t("to")} ${Math.round(x.target)}°` : ""}</div></div>${x.current != null ? `<span class="val">${Math.round(x.current)}°</span>` : ""}</div>`));
   L.other.forEach(x => rows.push(`<div class="lrow"><span class="ic warm">${ic("switch")}</span><div class="tx"><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")}</div></div><button class="pillbtn" data-act="off" data-id="${esc(x.id)}">${t("off")}</button></div>`));
-  const shown = liveExpanded ? rows : rows.slice(0, 4);
+  const shown = liveExpanded ? rows : rows.slice(0, 2);
   return `<div class="livesum"><span class="dot on" id="liveDot"></span><span><b>${t("now")}</b> · ${sum.length ? sum.join(", ") : t("nothingOn")}</span></div>
-    ${shown.join("")}${rows.length > 4 ? `<button class="more" id="liveMore">${liveExpanded ? t("less") : `${t("seeAll")} (${rows.length})`}</button>` : ""}`;
+    ${shown.join("")}${rows.length > 2 ? `<button class="more" id="liveMore">${liveExpanded ? t("less") : `${t("seeAll")} (${rows.length})`}</button>` : ""}`;
 }
 function bindLive() {
   document.querySelectorAll("#live [data-act]").forEach(b => b.onclick = async () => { buzz(); b.disabled = true; b.textContent = "…"; await post("api/set", { entity_id: b.dataset.id, action: b.dataset.act }).catch(() => toast(t("offline"))); refreshLive(); });
@@ -471,8 +580,8 @@ function renderLive(L) {
     const s = HOME.status; s.openings = L.security.open.map(x => x.name); s.locks = L.security.locks; if (L.security.alarm) s.alarm = L.security.alarm;
     const sl = $("#statusLine"); if (sl) sl.innerHTML = statusLine();
   }
-  if (L.activeScenes) document.querySelectorAll(".scene[data-id]").forEach(c => c.classList.toggle("active", L.activeScenes.includes(c.dataset.id)));
-  if (L.rooms && $("#rooms") && !$("#sheet").classList.contains("on")) { $("#rooms").innerHTML = roomsHTML(L.rooms); document.querySelectorAll(".room[data-room]").forEach(b => b.onclick = () => openRoom(b.dataset.room)); }
+  if (L.activeScenes) document.querySelectorAll(".scene[data-id], .orb[data-id]").forEach(c => c.classList.toggle("active", L.activeScenes.includes(c.dataset.id)));
+  if (L.rooms && $("#roomsBox") && !$("#sheet").classList.contains("on")) { $("#roomsBox").innerHTML = roomsBlock(L.rooms); document.querySelectorAll("#roomsBox [data-room]").forEach(b => b.onclick = () => openRoom(b.dataset.room)); }
   if (ROOM_OPEN && $("#sheet").classList.contains("on") && !SLIDING) loadRoom(ROOM_OPEN, true);
 }
 async function refreshLive() { try { renderLive(await api("api/live")); } catch {} }
@@ -506,7 +615,7 @@ async function openScene(id) {
     <div class="shead"><div class="bg ${d.photo ? "" : "m-" + esc(d.mood)}" ${bgStyle(d.photo)}></div>${closeBtn()}
       <h3>${esc(d.name)}</h3><p>${esc(d.parts.map(p => p.text).join(" · "))}</p></div>
     <div class="sbody">
-      <button class="btn primary" id="runScene" style="width:100%">${ic("scene")} ${t("run")}</button>
+      <div class="row2" style="margin-top:0"><button class="btn primary" id="runScene">${ic("scene")} ${t("run")}</button><button class="btn" id="editScene">${ic("edit")} ${t("edit")}</button></div>
       <p class="group">${t("whatDoes")}</p>
       <div class="glass" style="padding:0 14px">${groups || `<p class="quiet">—</p>`}</div>
       <p class="group">${t("mood")}</p>
@@ -518,6 +627,7 @@ async function openScene(id) {
   bindClose();
   $("#runScene").onclick = async () => { buzz(); const r = await post(`api/scene/${encodeURIComponent(id)}`).catch(() => ({})); toast(r.ok ? t("sceneDone")(d.name) : t("sceneFail")(d.name)); closeSheet(); if (r.confirmations?.length) { show("talk"); r.confirmations.forEach(confirmCard); } else loadHome(); };
   document.querySelectorAll("[data-mood]").forEach(b => b.onclick = async () => { await post(`api/scene/${encodeURIComponent(id)}`, { mood: b.dataset.mood }, "PATCH"); if (d.photo) await post("api/photo", { kind: "scene", id }, "DELETE"); openScene(id); });
+  $("#editScene").onclick = () => openEditor(id);
   $("#scPhoto").onclick = () => pickPhoto("scene", id, () => openScene(id));
   const np = $("#scNoPhoto"); if (np) np.onclick = async () => { await post("api/photo", { kind: "scene", id }, "DELETE"); openScene(id); };
   $("#scRename").onclick = async () => { const n = prompt(t("sceneName"), d.name); if (n && n.trim()) { await post(`api/scene/${encodeURIComponent(id)}`, { name: n.trim() }, "PATCH"); openScene(id); } };
@@ -525,11 +635,13 @@ async function openScene(id) {
 }
 function newSceneSheet() {
   openSheet(`<p class="sh3">${t("newScene")}</p><div class="sbody">
+    <button class="choice" id="chNew"><span class="ic">${ic("edit")}</span><span><b>${t("fromScratch")}</b><small>${t("fromScratchSub")}</small></span></button>
     <button class="choice" id="chCap"><span class="ic">${ic("capture")}</span><span><b>${t("capture")}</b><small>${t("captureSub")}</small></span></button>
     <button class="choice" id="chSug"><span class="ic">${ic("sparkle")}</span><span><b>${t("suggest")}</b><small>${t("suggestSub")}</small></span></button>
     <div class="row2"><button class="btn" id="chClose">${t("close")}</button></div></div>`);
   $("#chClose").onclick = () => { closeSheet(); };
   $("#chSug").onclick = suggest;
+  $("#chNew").onclick = () => openEditor(null);
   $("#chCap").onclick = () => {
     openSheet(`<p class="sh3">${t("capture")}</p><div class="sbody"><p style="color:var(--mute)">${t("captureSub")}</p>
       <input class="field" id="capName" placeholder="${t("sceneName")}" maxlength="40">
@@ -546,6 +658,144 @@ async function suggest() {
   $("#panel").innerHTML = `<div class="grab"></div><p class="sh3">${t("suggest")}</p><div class="sbody">` + (Array.isArray(list) && list.length ? list.map((s, i) => `<div class="sug"><span class="sw m-${moodOf(s.name)}"></span><div class="tx"><b>${esc(s.name)}</b><small>${esc(s.summary || "")}</small></div><button class="pillbtn" data-i="${i}">${t("add")}</button></div>`).join("") : `<p class="quiet">${t("offline")}</p>`) + `<div class="row2"><button class="btn" id="sgClose">${t("close")}</button></div></div>`;
   document.querySelectorAll("[data-i]").forEach(b => b.onclick = async () => { const s = list[+b.dataset.i]; b.disabled = true; await post("api/scenes", { name: s.name, actions: s.actions }); b.textContent = t("added"); });
   $("#sgClose").onclick = () => { closeSheet(); loadHome(); };
+}
+
+
+// ---------- scene editor: room by room, exactly what happens ----------
+let ED = null;
+async function openEditor(id) {
+  let dev, raw;
+  try { [dev, raw] = await Promise.all([api("api/devices"), id ? api(`api/scene/${encodeURIComponent(id)}/raw`) : Promise.resolve({ name: "", mood: "default", actions: [] })]); } catch { toast(t("offline")); return; }
+  ED = { id, name: raw.name, mood: raw.mood, rooms: dev.rooms, unit: dev.unit || "°F", sel: new Map(), orphans: [], open: new Set() };
+  loadActions(raw.actions || []);
+  for (const r of ED.rooms) if (r.devices.some(d => ED.sel.has(d.id))) ED.open.add(r.room);
+  if (!ED.open.size && ED.rooms[0]) ED.open.add(ED.rooms[0].room);
+  renderEditor();
+}
+const devById = (id) => { for (const r of ED.rooms) for (const d of r.devices) if (d.id === id) return { d, room: r.room }; return null; };
+function loadActions(actions) {
+  ED.sel.clear(); ED.orphans = [];
+  for (const a of actions) {
+    if (a.music) {
+      const room = ED.rooms.find(r => r.room === a.music.room);
+      const spk = room?.devices.find(d => d.kind === "speaker");
+      if (spk) ED.sel.set(spk.id, { mode: "play", query: a.music.query, volume: a.music.volume_pct ?? 20 }); else ED.orphans.push(a);
+      continue;
+    }
+    for (const id of a.entity_ids || []) {
+      const hit = devById(id); if (!hit) { ED.orphans.push({ ...a, entity_ids: [id] }); continue; }
+      const { d } = hit, sv = a.service, data = a.data || {};
+      if (d.kind === "light") ED.sel.set(id, { on: sv !== "turn_off", level: data.brightness_pct ?? 100 });
+      else if (d.kind === "shade") ED.sel.set(id, { position: data.position ?? (sv === "open_cover" ? 100 : sv === "close_cover" ? 0 : 50) });
+      else if (d.kind === "climate") ED.sel.set(id, { temp: data.temperature ?? d.target });
+      else if (d.kind === "speaker") ED.sel.set(id, { mode: sv === "media_pause" || sv === "turn_off" ? "pause" : "play", query: "", volume: 20 });
+      else if (d.kind === "tv" || d.kind === "fan") ED.sel.set(id, { on: sv !== "turn_off" && sv !== "media_pause" });
+    }
+  }
+}
+function fillNow() {
+  ED.sel.clear();
+  for (const r of ED.rooms) for (const d of r.devices) {
+    if (d.kind === "light") ED.sel.set(d.id, { on: d.on, level: d.on ? d.level || 100 : 100 });
+    else if (d.kind === "shade") ED.sel.set(d.id, { position: d.position });
+    else if (d.kind === "climate" && d.mode !== "off") ED.sel.set(d.id, { temp: Math.round(d.target) });
+    else if (d.kind === "speaker" && d.playing && d.title) ED.sel.set(d.id, { mode: "play", query: d.title, volume: d.volume });
+    else if (d.kind === "tv") ED.sel.set(d.id, { on: d.on });
+  }
+  for (const r of ED.rooms) if (r.devices.some(d => ED.sel.has(d.id))) ED.open.add(r.room);
+}
+function defaultsFor(d) {
+  if (d.kind === "light") return { on: true, level: d.dimmable ? 70 : 100 };
+  if (d.kind === "shade") return { position: d.position ?? 100 };
+  if (d.kind === "climate") return { temp: Math.round(d.target || 72) };
+  if (d.kind === "speaker") return { mode: "play", query: "", volume: 20 };
+  return { on: true };
+}
+function toActions() {
+  const out = []; const onBy = new Map(); const offBy = new Map();
+  for (const [id, c] of ED.sel) {
+    const hit = devById(id); if (!hit) continue; const { d, room } = hit;
+    const domain = id.split(".")[0];
+    if (d.kind === "light") {
+      if (c.on) { const k = domain + "|" + (d.dimmable ? c.level : 100); if (!onBy.has(k)) onBy.set(k, []); onBy.get(k).push(id); }
+      else { if (!offBy.has(domain)) offBy.set(domain, []); offBy.get(domain).push(id); }
+    } else if (d.kind === "shade") out.push({ domain: "cover", service: "set_cover_position", entity_ids: [id], data: { position: c.position } });
+    else if (d.kind === "climate") out.push({ domain: "climate", service: "set_temperature", entity_ids: [id], data: { temperature: c.temp } });
+    else if (d.kind === "speaker") { if (c.mode === "pause") out.push({ domain: "media_player", service: "media_pause", entity_ids: [id] }); else if (c.query.trim()) out.push({ music: { query: c.query.trim(), room, volume_pct: c.volume } }); }
+    else if (d.kind === "tv") out.push({ domain: "media_player", service: c.on ? "turn_on" : "turn_off", entity_ids: [id] });
+    else if (d.kind === "fan") out.push({ domain: "fan", service: c.on ? "turn_on" : "turn_off", entity_ids: [id] });
+  }
+  const lights = [];
+  for (const [k, ids] of onBy) { const [domain, lv] = k.split("|"); lights.push(domain === "light" ? { domain, service: "turn_on", entity_ids: ids, data: { brightness_pct: +lv } } : { domain, service: "turn_on", entity_ids: ids }); }
+  for (const [domain, ids] of offBy) lights.push({ domain, service: "turn_off", entity_ids: ids });
+  return [...lights, ...out, ...ED.orphans];
+}
+function edDevHTML(d) {
+  const c = ED.sel.get(d.id); const on = !!c;
+  const iconOf = { light: "light", shade: "shade", climate: "climate", speaker: "speaker", tv: "tv", fan: "fan" }[d.kind] || "switch";
+  let sum = "", ctl = "";
+  const seg = (a, b, val, key) => `<div class="seg mini"><button data-set="${key}" data-v="1" aria-pressed="${val}">${a}</button><button data-set="${key}" data-v="0" aria-pressed="${!val}">${b}</button></div>`;
+  const sl = (val, key, cls = "") => `<div class="slider ${cls}" data-edslider="${key}" data-val="${val}"><div class="fill" style="width:${val}%"></div><div class="lab"><span></span><span class="v">${val}%</span></div></div>`;
+  if (c) {
+    if (d.kind === "light") { sum = c.on ? (d.dimmable ? c.level + "%" : t("onW")) : t("offW"); ctl = seg(t("onW"), t("offW"), c.on, "on") + (c.on && d.dimmable ? sl(c.level, "level") : ""); }
+    else if (d.kind === "shade") { sum = c.position + "%"; ctl = sl(c.position, "position", "cool"); }
+    else if (d.kind === "climate") { sum = c.temp + "°"; ctl = `<div class="thermo"><button data-step="-1">−</button><span class="big">${c.temp}°</span><button data-step="1">+</button></div>`; }
+    else if (d.kind === "speaker") { sum = c.mode === "pause" ? t("pauseW") : (c.query || "…"); ctl = seg(t("playW"), t("pauseW"), c.mode !== "pause", "mode") + (c.mode !== "pause" ? `<input class="field" data-query placeholder="${t("song")}" value="${esc(c.query)}" style="margin-top:8px">` + sl(c.volume, "volume") : ""); }
+    else { sum = c.on ? t("onW") : t("offW"); ctl = seg(t("onW"), t("offW"), c.on, "on"); }
+  }
+  return `<div class="ed-dev${on ? " on" : ""}" data-ed="${esc(d.id)}"><div class="top"><button class="chk" data-chk aria-label="${esc(d.name)}">${ic("check")}</button><span class="nm">${ic(iconOf)} ${esc(d.name)}</span><span class="sum">${esc(sum)}</span></div><div class="ctl">${ctl}</div></div>`;
+}
+function roomCount(r) { return r.devices.filter(d => ED.sel.has(d.id)).length; }
+function renderEditor() {
+  const moods = ["morning", "movie", "dinner", "relax", "away", "night", "party", "focus", "default"];
+  const rooms = ED.rooms.map(r => { const n = roomCount(r); return `<details class="ed-room" data-edroom="${esc(r.room)}" ${ED.open.has(r.room) ? "open" : ""}><summary><span>${esc(r.room)}</span><span style="display:flex;gap:10px;align-items:center"><span class="cnt${n ? "" : " zero"}">${n}</span>${ic("chev")}</span></summary><div class="ed-body">${r.devices.map(edDevHTML).join("")}</div></details>`; }).join("");
+  openSheet(`<p class="sh3">${ED.id ? t("editTitle") : t("newTitle")}</p><div class="sbody">
+    <input class="field" id="edName" placeholder="${t("sceneName")}" value="${esc(ED.name)}" maxlength="40">
+    <div class="moods">${moods.map(m => `<button class="m-${m}" data-edmood="${m}" aria-pressed="${m === ED.mood}" aria-label="${m}"></button>`).join("")}</div>
+    <button class="choice" id="edFill"><span class="ic">${ic("capture")}</span><span><b>${t("fillNow")}</b><small>${t("captureSub")}</small></span></button>
+    <div id="edRooms">${rooms}</div></div>
+    <div class="stick"><div class="row2" style="margin-top:0"><button class="btn" id="edCancel">${t("cancel")}</button><button class="btn primary" id="edSave">${t("save")}</button></div></div>`);
+  bindEditor();
+}
+function bindEditor() {
+  $("#edName").oninput = (e) => ED.name = e.target.value;
+  document.querySelectorAll("[data-edmood]").forEach(b => b.onclick = () => { ED.mood = b.dataset.edmood; document.querySelectorAll("[data-edmood]").forEach(x => x.setAttribute("aria-pressed", x === b)); });
+  $("#edFill").onclick = () => { buzz(); fillNow(); renderEditor(); toast(t("fillNow")); };
+  $("#edCancel").onclick = () => { closeSheet(); if (ED.id) openScene(ED.id); };
+  $("#edSave").onclick = saveEditor;
+  document.querySelectorAll("details.ed-room").forEach(dt => dt.addEventListener("toggle", () => dt.open ? ED.open.add(dt.dataset.edroom) : ED.open.delete(dt.dataset.edroom)));
+  document.querySelectorAll("[data-ed]").forEach(bindEdRow);
+}
+function refreshRow(id) {
+  const old = document.querySelector(`[data-ed="${CSS.escape(id)}"]`); if (!old) return;
+  const { d, room } = devById(id);
+  old.outerHTML = edDevHTML(d);
+  bindEdRow(document.querySelector(`[data-ed="${CSS.escape(id)}"]`));
+  const r = ED.rooms.find(x => x.room === room); const n = roomCount(r);
+  const cnt = document.querySelector(`[data-edroom="${CSS.escape(room)}"] .cnt`); if (cnt) { cnt.textContent = n; cnt.classList.toggle("zero", !n); }
+}
+function bindEdRow(row) {
+  const id = row.dataset.ed; const { d } = devById(id);
+  row.querySelector("[data-chk]").onclick = () => { buzz(8); ED.sel.has(id) ? ED.sel.delete(id) : ED.sel.set(id, defaultsFor(d)); refreshRow(id); };
+  row.querySelectorAll("[data-set]").forEach(b => b.onclick = () => { const c = ED.sel.get(id); const v = b.dataset.v === "1"; if (b.dataset.set === "on") c.on = v; else c.mode = v ? "play" : "pause"; refreshRow(id); });
+  row.querySelectorAll("[data-step]").forEach(b => b.onclick = () => { const c = ED.sel.get(id); c.temp = Math.round(c.temp + +b.dataset.step); refreshRow(id); });
+  const q = row.querySelector("[data-query]"); if (q) q.oninput = (e) => { ED.sel.get(id).query = e.target.value; row.querySelector(".sum").textContent = e.target.value || "…"; };
+  row.querySelectorAll("[data-edslider]").forEach(el => {
+    const key = el.dataset.edslider;
+    const set = (x) => { const r = el.getBoundingClientRect(); const v = Math.max(key === "level" ? 1 : 0, Math.min(100, Math.round((x - r.left) / r.width * 100))); el.querySelector(".fill").style.width = v + "%"; el.querySelector(".v").textContent = v + "%"; ED.sel.get(id)[key] = v; row.querySelector(".sum").textContent = v + "%"; return v; };
+    el.addEventListener("pointerdown", (e) => { el.setPointerCapture(e.pointerId); set(e.clientX); });
+    el.addEventListener("pointermove", (e) => { if (el.hasPointerCapture(e.pointerId)) set(e.clientX); });
+    el.addEventListener("pointerup", (e) => set(e.clientX));
+  });
+}
+async function saveEditor() {
+  const name = (ED.name || "").trim();
+  if (!name) { $("#edName").focus(); toast(t("sceneName")); return; }
+  const actions = toActions();
+  if (!actions.length) { toast(t("nothingSel")); return; }
+  const r = await post(`api/scene/${encodeURIComponent(ED.id || "__new__")}`, { name, mood: ED.mood, actions }, "PUT").catch(() => ({}));
+  if (!r.ok) { toast(t("offline")); return; }
+  buzz(); toast(t("saved")); closeSheet(); await loadHome(); openScene(r.id);
 }
 
 // room control sheet

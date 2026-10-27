@@ -9,7 +9,7 @@ import { tools } from "./tools.js";
 import { classify, roleAllows } from "./policy.js";
 import { icons } from "./icons.js";
 
-const VERSION = "0.5.1";
+const VERSION = "0.6.0";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOUSE_PATH = process.env.BINA_HOUSE || "./house.json";
 const MODEL = process.env.BINA_MODEL || "claude-sonnet-4-6";
@@ -822,6 +822,48 @@ app.post("/api/set", wrap(async (req, res) => {
   await ha.call(call[0], call[1], { entity_id: id, ...call[2] });
   stateCache.at = 0; lastLive = ""; audit({ user: userFrom(req).id, action: `${call[0]}.${call[1]}`, entity: id, value });
   res.json({ ok: true });
+}));
+// everything a scene can control, grouped by room, with current state (for the scene editor)
+app.get("/api/devices", wrap(async (_req, res) => {
+  const list = await exposedEntities({ includeNoisy: true });
+  const rooms = new Map();
+  for (const { s, room } of list) {
+    if (isNoise(s) || isPersonal(s) || s.state === "unavailable") continue;
+    const d = dom(s.entity_id), a = s.attributes || {}, r = room || (es() ? "Otros" : "Other");
+    let dev = null; const base = { id: s.entity_id, name: cleanName(fname(s), room), state: s.state };
+    if (d === "light") dev = { ...base, kind: "light", on: s.state === "on", level: a.brightness != null ? Math.round(a.brightness / 2.55) : (s.state === "on" ? 100 : 0), dimmable: (a.supported_color_modes || []).length ? a.supported_color_modes.some(m => m !== "onoff") : a.brightness != null || s.state === "off" };
+    else if (d === "switch" && /light|lamp|cabinet|uplight|downlight|sconce|pendant|chandelier|strip|luz|lampara/i.test(fname(s))) dev = { ...base, kind: "light", on: s.state === "on", level: s.state === "on" ? 100 : 0, dimmable: false, domain: "switch" };
+    else if (d === "cover") dev = { ...base, kind: "shade", position: a.current_position ?? (s.state === "open" ? 100 : 0) };
+    else if (d === "climate") dev = { ...base, kind: "climate", target: a.temperature ?? 72, mode: s.state };
+    else if (d === "media_player") dev = { ...base, kind: isTV(s) ? "tv" : "speaker", on: !["off", "standby"].includes(s.state), playing: s.state === "playing", title: [a.media_title, a.media_artist].filter(Boolean).join(" "), volume: a.volume_level != null ? Math.round(a.volume_level * 100) : 20 };
+    else if (d === "fan") dev = { ...base, kind: "fan", on: s.state === "on" };
+    if (!dev) continue;
+    if (!rooms.has(r)) rooms.set(r, []);
+    rooms.get(r).push(dev);
+  }
+  const order = { light: 0, shade: 1, climate: 2, speaker: 3, tv: 4, fan: 5 };
+  const out = [...rooms.entries()].map(([room, devices]) => ({ room, devices: devices.sort((x, y) => (order[x.kind] ?? 9) - (order[y.kind] ?? 9) || x.name.localeCompare(y.name)) }));
+  out.sort((x, y) => y.devices.filter(d => d.kind === "light").length - x.devices.filter(d => d.kind === "light").length);
+  res.json({ unit: TEMP_UNIT, rooms: out });
+}));
+// replace a scene's name, mood and actions from the editor
+app.put("/api/scene/:id", wrap(async (req, res) => {
+  const { name, mood, actions } = req.body || {};
+  if (!Array.isArray(actions)) return res.status(400).json({ error: "actions" });
+  const known = new Set((await exposedEntities({ includeNoisy: true })).map(x => x.s.entity_id));
+  const clean = actions.filter(a => a && (a.music?.query && a.music?.room) || (a.domain && (a.entity_ids || []).length && a.entity_ids.every(id => known.has(id)))).map(a => a.music ? { music: { query: String(a.music.query).slice(0, 120), room: a.music.room, volume_pct: a.music.volume_pct } } : { domain: a.domain, service: a.service, entity_ids: a.entity_ids, data: a.data || {} });
+  let sc = house.scenes.find(s => s.id === req.params.id);
+  if (!sc) { const nm = String(name || "").trim().slice(0, 40); if (!nm) return res.status(400).json({ error: "name" }); sc = { id: norm(nm).replace(/\s+/g, "-") || newId(), name: nm, mood: guessMood(nm), actions: [] }; house.scenes = house.scenes.filter(x => x.id !== sc.id); house.scenes.push(sc); }
+  if (name) sc.name = String(name).trim().slice(0, 40);
+  if (MOODS.includes(mood)) sc.mood = mood;
+  sc.actions = clean; fixSceneTemps(); saveHouse();
+  audit({ user: userFrom(req).id, action: "scene.edit", id: sc.id, actions: clean.length });
+  res.json({ ok: true, id: sc.id });
+}));
+app.get("/api/scene/:id/raw", wrap(async (req, res) => {
+  const sc = house.scenes.find(s => s.id === req.params.id);
+  if (!sc) return res.status(404).json({ error: "no scene" });
+  res.json({ id: sc.id, name: sc.name, mood: sc.mood || guessMood(sc.name), photo: photoUrl("scene", sc.id), actions: sc.actions || [] });
 }));
 app.get("/api/house", wrap(async (_req, res) => res.json(await houseModel())));
 app.get("/api/feed", (_req, res) => res.json(feed.slice(0, 50)));

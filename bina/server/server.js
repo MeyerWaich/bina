@@ -37,7 +37,7 @@ const house = JSON.parse(fs.readFileSync(HOUSE_PATH, "utf8"));
 house.memory ||= []; house.preferences ||= []; house.protected ||= []; house.scenes ||= [];
 const saveHouse = () => fs.writeFileSync(HOUSE_PATH, JSON.stringify(house, null, 2));
 const FEED_PATH = path.join(DATA, "feed.json"), EVENTS_PATH = path.join(DATA, "events.json"), ALERTS_PATH = path.join(DATA, "alerts.json");
-let feed = readJson(FEED_PATH, []), events = readJson(EVENTS_PATH, []), alerts = readJson(ALERTS_PATH, []).filter(a => !/macbook|iphone|ipad|imac|\b[A-Z0-9]{10,}\b/.test(a.message || ""));
+let feed = readJson(FEED_PATH, []), events = readJson(EVENTS_PATH, []), alerts = readJson(ALERTS_PATH, []).filter(a => !/macbook|iphone|ipad|imac/i.test(a.message || "") && !/\b(?=[A-Z0-9]*\d)[A-Z0-9]{10,}\b/.test(a.message || ""));
 const pushFeed = (item) => { feed.unshift(item); feed = feed.slice(0, 200); fs.writeFile(FEED_PATH, JSON.stringify(feed), () => {}); };
 const pushEvent = (item) => { events.unshift(item); events = events.slice(0, 150); fs.writeFile(EVENTS_PATH, JSON.stringify(events), () => {}); };
 const pushAlert = (item) => { alerts.unshift(item); alerts = alerts.slice(0, 100); fs.writeFile(ALERTS_PATH, JSON.stringify(alerts), () => {}); };
@@ -639,7 +639,7 @@ function cleanName(name, room) {
   n = n.replace(/\b(\w+)\s+\1\b/gi, "$1").trim();
   return n || name;
 }
-const isPersonal = (s) => /macbook|iphone|ipad|imac|android|pixel|galaxy|laptop/i.test(fname(s) + " " + s.entity_id) || /^[A-Z0-9]{10,}$/.test(String(fname(s)).trim());
+const isPersonal = (s) => /macbook|iphone|ipad|imac|android|pixel|galaxy|laptop/i.test(fname(s) + " " + s.entity_id) || /^(?=[A-Z0-9]*\d)[A-Z0-9]{10,}$/.test(String(fname(s)).trim());
 const isNoise = (s) => /keypad|_led\b| led\b|button|scene_controller/i.test(fname(s) + " " + s.entity_id);
 const isTV = (s) => s.attributes?.device_class === "tv" || /\b(tv|tele|television|samsung|lg|sony)\b/i.test(fname(s) + " " + s.entity_id);
 async function liveStatus() {

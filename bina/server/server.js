@@ -9,7 +9,7 @@ import { tools } from "./tools.js";
 import { classify, roleAllows } from "./policy.js";
 import { icons } from "./icons.js";
 
-const VERSION = "0.4.2";
+const VERSION = "0.5.0";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOUSE_PATH = process.env.BINA_HOUSE || "./house.json";
 const MODEL = process.env.BINA_MODEL || "claude-sonnet-4-6";
@@ -23,10 +23,13 @@ fs.mkdirSync(SNAP_DIR, { recursive: true });
 
 const anthropic = new Anthropic();
 const app = express();
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "8mb" }));
 for (const [n, b64] of Object.entries(icons)) app.get("/" + n, (_q, r) => r.type("png").set("Cache-Control", "max-age=604800").send(Buffer.from(b64, "base64")));
 app.use(express.static(path.join(__dirname, "..", "app")));
 app.use("/snaps", express.static(SNAP_DIR, { maxAge: "7d" }));
+const PHOTO_DIR = path.join(DATA, "photos");
+fs.mkdirSync(PHOTO_DIR, { recursive: true });
+app.use("/photos", express.static(PHOTO_DIR, { maxAge: "1h" }));
 
 // ---------- persistent state ----------
 const readJson = (p, d) => { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return d; } };
@@ -201,7 +204,7 @@ async function runTool(name, input, user, ctx) {
     }
     case "remember": house.memory.push(input.fact); saveHouse(); return "saved";
     case "save_scene": {
-      const scene = { id: norm(input.name).replace(/\s+/g, "-") || newId(), name: input.name, actions: input.actions || [] };
+      const scene = { id: norm(input.name).replace(/\s+/g, "-") || newId(), name: input.name, mood: MOODS.includes(input.mood) ? input.mood : guessMood(input.name), actions: input.actions || [] };
       house.scenes = house.scenes.filter(s => norm(s.name) !== norm(scene.name)); house.scenes.push(scene); saveHouse();
       return { saved: true, note: "It is now a button on the home screen." };
     }
@@ -428,6 +431,167 @@ async function suggestScenes(user) {
   return out.map(s => ({ ...s, actions: (s.actions || []).filter(a => (a.music && a.music.query) || (a.domain && (a.entity_ids || []).length && a.entity_ids.every(id => known.has(id)) && !["lock", "alarm_control_panel", "camera"].includes(a.domain))).map(a => a.music && a.music.query ? { music: a.music } : { domain: a.domain, service: a.service, entity_ids: a.entity_ids, data: a.data || {} }) })).filter(s => s.actions.length);
 }
 
+// ---------- scenes: plain-language description, moods, active detection, capture ----------
+const MOODS = ["morning", "movie", "dinner", "relax", "away", "night", "party", "focus", "default"];
+function guessMood(name) {
+  const n = norm(name);
+  if (/manana|morning|despert|dia\b|dias|wake|amanec/.test(n)) return "morning";
+  if (/cine|movie|pelicula|tv|film|theater|teatro/.test(n)) return "movie";
+  if (/cena|dinner|comida|almuerzo|lunch|desayuno|breakfast/.test(n)) return "dinner";
+  if (/relax|chill|tranq|lectura|read|spa/.test(n)) return "relax";
+  if (/salir|saliendo|me voy|away|leave|leaving|vacacion|ausente/.test(n)) return "away";
+  if (/noche|night|dormir|sleep|bed|cama/.test(n)) return "night";
+  if (/fiesta|party|entertain|visita|guests|shabbat|sabbat/.test(n)) return "party";
+  if (/trabajo|work|focus|oficina|office|estudio/.test(n)) return "focus";
+  return "default";
+}
+function photoUrl(kind, id) {
+  const f = `${kind}-${String(id).replace(/[^a-z0-9_-]/gi, "_")}.jpg`;
+  try { const st = fs.statSync(path.join(PHOTO_DIR, f)); return `photos/${f}?v=${Math.round(st.mtimeMs)}`; } catch { return null; }
+}
+async function entityInfo() {
+  const list = await exposedEntities({ includeNoisy: true });
+  return new Map(list.map(x => [x.s.entity_id, { name: cleanName(fname(x.s), x.room), room: x.room, s: x.s }]));
+}
+// short parts for the card + full lines for the detail sheet
+function describeScene(scene, info, lang) {
+  const E = lang !== "en";
+  const parts = []; const lines = [];
+  const lightsOn = [], lightsOff = [], levels = [];
+  for (const a of scene.actions || []) {
+    if (a.music) {
+      parts.push({ kind: "music", text: E ? `${a.music.query} en ${a.music.room}` : `${a.music.query} in ${a.music.room}` });
+      lines.push({ kind: "music", room: a.music.room, name: a.music.query, setting: a.music.volume_pct != null ? `${E ? "vol" : "vol"} ${a.music.volume_pct}%` : "" });
+      continue;
+    }
+    const ids = a.entity_ids || [];
+    for (const id of ids) {
+      const i = info.get(id) || { name: id.split(".")[1].replace(/_/g, " "), room: null };
+      const d = a.domain, sv = a.service, data = a.data || {};
+      let kind = d, setting = "";
+      if (d === "light" || (d === "switch" && /turn_/.test(sv))) {
+        kind = "light";
+        if (sv === "turn_off") { lightsOff.push(id); setting = E ? "apagada" : "off"; }
+        else { lightsOn.push(id); const lv = data.brightness_pct ?? (data.brightness != null ? Math.round(data.brightness / 2.55) : 100); levels.push(lv); setting = `${lv}%`; }
+      } else if (d === "cover") { kind = "shade"; setting = sv === "open_cover" ? (E ? "abrir" : "open") : sv === "close_cover" ? (E ? "cerrar" : "close") : data.position != null ? `${data.position}%` : sv; }
+      else if (d === "climate") { kind = "climate"; setting = data.temperature != null ? `${data.temperature}°` : (data.hvac_mode || sv); }
+      else if (d === "media_player") { kind = /tv|tele/i.test(i.name + id) ? "tv" : "speaker"; setting = { media_pause: E ? "pausa" : "pause", turn_off: E ? "apagar" : "off", turn_on: E ? "prender" : "on", volume_set: `vol ${Math.round((data.volume_level || 0) * 100)}%`, select_source: data.source || "" }[sv] || sv.replace(/_/g, " "); }
+      else if (d === "lock") { kind = "lock"; setting = sv === "lock" ? (E ? "cerrar con llave" : "lock") : (E ? "abrir" : "unlock"); }
+      else if (d === "alarm_control_panel") { kind = "alarm"; setting = /arm/.test(sv) ? (E ? "armar" : "arm") : (E ? "desarmar" : "disarm"); }
+      else if (d === "fan") { kind = "fan"; setting = sv === "turn_off" ? (E ? "apagar" : "off") : (E ? "prender" : "on"); }
+      else if (d === "scene" || d === "script") { kind = "scene"; setting = ""; }
+      lines.push({ kind, room: i.room, name: i.name, setting, id });
+    }
+  }
+  if (lightsOn.length) {
+    const avg = Math.round(levels.reduce((x, y) => x + y, 0) / levels.length);
+    const allSame = levels.every(l => l === levels[0]);
+    parts.unshift({ kind: "light", text: E ? `${lightsOn.length} ${lightsOn.length === 1 ? "luz" : "luces"} ${allSame ? "al " + levels[0] : "~" + avg}%` : `${lightsOn.length} ${lightsOn.length === 1 ? "light" : "lights"} at ${allSame ? levels[0] : "~" + avg}%` });
+  }
+  if (lightsOff.length) parts.splice(lightsOn.length ? 1 : 0, 0, { kind: "lightoff", text: E ? `apaga ${lightsOff.length}` : `${lightsOff.length} off` });
+  const by = (k) => lines.filter(l => l.kind === k);
+  if (by("shade").length) parts.push({ kind: "shade", text: (E ? "persianas " : "shades ") + by("shade")[0].setting });
+  if (by("climate").length) parts.push({ kind: "climate", text: by("climate")[0].setting });
+  if (by("tv").length) parts.push({ kind: "tv", text: (E ? "tele: " : "TV: ") + by("tv").map(l => l.setting).join(", ") });
+  if (by("speaker").length) parts.push({ kind: "speaker", text: (E ? "audio " : "audio ") + by("speaker")[0].setting });
+  if (by("lock").length) parts.push({ kind: "lock", text: by("lock")[0].setting });
+  if (by("alarm").length) parts.push({ kind: "alarm", text: (E ? "alarma: " : "alarm: ") + by("alarm")[0].setting });
+  const rooms = [...new Set(lines.map(l => l.room).filter(Boolean))];
+  return { parts, lines, rooms };
+}
+// a scene is "active" when every light/cover/climate target it sets matches the house now
+function sceneActive(scene, st) {
+  let checked = 0;
+  for (const a of scene.actions || []) {
+    if (a.music) continue;
+    for (const id of a.entity_ids || []) {
+      const s = st[id]; if (!s) continue;
+      if (a.domain === "light") {
+        checked++;
+        if (a.service === "turn_off") { if (s.state !== "off") return false; }
+        else {
+          if (s.state !== "on") return false;
+          const want = a.data?.brightness_pct; const have = s.attributes?.brightness != null ? s.attributes.brightness / 2.55 : null;
+          if (want != null && have != null && Math.abs(want - have) > 6) return false;
+        }
+      } else if (a.domain === "cover") {
+        checked++;
+        if (a.service === "open_cover" && !["open", "opening"].includes(s.state)) return false;
+        if (a.service === "close_cover" && !["closed", "closing"].includes(s.state)) return false;
+      } else if (a.domain === "climate" && a.data?.temperature != null) {
+        checked++;
+        if (Math.abs((s.attributes?.temperature ?? -99) - a.data.temperature) > 0.6) return false;
+      }
+    }
+  }
+  return checked > 0;
+}
+async function scenesView(lang) {
+  const [info, st] = await Promise.all([entityInfo(), states()]);
+  return house.scenes.map(sc => {
+    const d = describeScene(sc, info, lang);
+    return { id: sc.id, name: sc.name, mood: sc.mood || guessMood(sc.name), photo: photoUrl("scene", sc.id), parts: d.parts, rooms: d.rooms, active: sceneActive(sc, st) };
+  });
+}
+// snapshot of the house right now (Savant-style capture)
+async function captureScene(name, roomsFilter) {
+  const list = await exposedEntities();
+  const inRoom = (x) => !roomsFilter?.length || (x.room && roomsFilter.includes(x.room));
+  const actions = []; const byLevel = new Map(); const offs = [];
+  for (const x of list.filter(inRoom)) {
+    const s = x.s, d = dom(s.entity_id), a = s.attributes || {};
+    if (d === "light") {
+      if (s.state === "on") { const lv = a.brightness != null ? Math.max(1, Math.round(a.brightness / 2.55)) : 100; if (!byLevel.has(lv)) byLevel.set(lv, []); byLevel.get(lv).push(s.entity_id); }
+      else if (s.state === "off") offs.push(s.entity_id);
+    } else if (d === "cover" && a.current_position != null) actions.push({ domain: "cover", service: "set_cover_position", entity_ids: [s.entity_id], data: { position: a.current_position } });
+    else if (d === "cover" && ["open", "closed"].includes(s.state)) actions.push({ domain: "cover", service: s.state === "open" ? "open_cover" : "close_cover", entity_ids: [s.entity_id] });
+    else if (d === "climate" && a.temperature != null && s.state !== "off") actions.push({ domain: "climate", service: "set_temperature", entity_ids: [s.entity_id], data: { temperature: a.temperature } });
+    else if (d === "media_player" && s.state === "playing" && !isTV(s) && a.media_title && x.room) actions.push({ music: { query: [a.media_title, a.media_artist].filter(Boolean).join(" "), room: x.room, volume_pct: a.volume_level != null ? Math.round(a.volume_level * 100) : undefined } });
+  }
+  for (const [lv, ids] of byLevel) actions.unshift({ domain: "light", service: "turn_on", entity_ids: ids, data: { brightness_pct: lv } });
+  if (offs.length) actions.push({ domain: "light", service: "turn_off", entity_ids: offs });
+  const scene = { id: norm(name).replace(/\s+/g, "-") || newId(), name, mood: guessMood(name), actions };
+  house.scenes = house.scenes.filter(x => norm(x.name) !== norm(name)); house.scenes.push(scene); saveHouse();
+  return scene;
+}
+// everything controllable in one room
+async function roomDetail(room) {
+  const list = (await exposedEntities()).filter(x => (x.room || "") === room);
+  const out = [];
+  for (const { s } of list) {
+    if (isNoise(s) || isPersonal(s)) continue;
+    const d = dom(s.entity_id), a = s.attributes || {}, base = { id: s.entity_id, name: cleanName(fname(s), room), state: s.state };
+    if (d === "light") out.push({ ...base, kind: "light", on: s.state === "on", level: a.brightness != null ? Math.round(a.brightness / 2.55) : (s.state === "on" ? 100 : 0), dimmable: (a.supported_color_modes || []).length ? a.supported_color_modes.some(m => m !== "onoff") : a.brightness != null || s.state === "off" });
+    else if (d === "switch") out.push({ ...base, kind: /light|lamp|cabinet|uplight|downlight|sconce|pendant|luz/i.test(fname(s)) ? "light" : "switch", on: s.state === "on", level: s.state === "on" ? 100 : 0, dimmable: false });
+    else if (d === "media_player") out.push({ ...base, kind: isTV(s) ? "tv" : "speaker", on: !["off", "standby", "unavailable"].includes(s.state), playing: s.state === "playing", title: a.media_title || "", artist: a.media_artist || "", source: a.source || a.app_name || "", sources: (a.source_list || []).slice(0, 12), volume: a.volume_level != null ? Math.round(a.volume_level * 100) : null, art: a.entity_picture || null });
+    else if (d === "cover") out.push({ ...base, kind: "shade", position: a.current_position ?? (s.state === "open" ? 100 : 0) });
+    else if (d === "climate") out.push({ ...base, kind: "climate", mode: s.state, current: a.current_temperature, target: a.temperature, min: a.min_temp, max: a.max_temp });
+    else if (d === "lock") out.push({ ...base, kind: "lock" });
+    else if (d === "binary_sensor" && /^(door|window|opening|garage_door)$/.test(a.device_class || "")) out.push({ ...base, kind: "contact", open: s.state === "on" });
+    else if (d === "camera") out.push({ ...base, kind: "camera" });
+    else if (d === "fan") out.push({ ...base, kind: "fan", on: s.state === "on" });
+  }
+  const order = { light: 0, switch: 1, shade: 2, climate: 3, speaker: 4, tv: 5, fan: 6, contact: 7, lock: 8, camera: 9 };
+  out.sort((x, y) => (order[x.kind] ?? 99) - (order[y.kind] ?? 99) || x.name.localeCompare(y.name));
+  return { room, photo: photoUrl("room", room), devices: out };
+}
+async function roomsView() {
+  const list = await exposedEntities();
+  const rooms = new Map();
+  for (const { s, room } of list) {
+    if (!room || isNoise(s) || isPersonal(s)) continue;
+    if (!rooms.has(room)) rooms.set(room, { room, lightsOn: 0, lights: 0, playing: null, tvOn: false, temp: null, open: 0, devices: 0 });
+    const r = rooms.get(room), d = dom(s.entity_id), a = s.attributes || {};
+    r.devices++;
+    if (d === "light" || (d === "switch" && /light|lamp|cabinet|uplight|downlight|sconce|pendant|luz/i.test(fname(s)))) { r.lights++; if (s.state === "on") r.lightsOn++; }
+    if (d === "media_player" && s.state === "playing" && !isTV(s)) r.playing = a.media_title || "♪";
+    if (d === "media_player" && isTV(s) && !["off", "standby", "unavailable"].includes(s.state)) r.tvOn = true;
+    if (d === "climate" && a.current_temperature != null) r.temp = Math.round(a.current_temperature);
+    if (d === "binary_sensor" && s.state === "on" && /^(door|window|opening)$/.test(a.device_class || "")) r.open++;
+  }
+  return [...rooms.values()].filter(r => r.devices > 0).map(r => ({ ...r, photo: photoUrl("room", r.room) })).sort((a, b) => (b.lightsOn + (b.playing ? 2 : 0) + (b.tvOn ? 2 : 0)) - (a.lightsOn + (a.playing ? 2 : 0) + (a.tvOn ? 2 : 0)) || b.lights - a.lights);
+}
+
 // ---------- routes ----------
 const userFrom = (req) => house.residents.find(r => r.id === (req.headers["x-bina-user"] || "owner")) || house.residents[0];
 const wrap = (fn) => async (req, res) => { try { await fn(req, res); } catch (e) { console.error(req.path, e.message); res.status(500).json({ error: e.message }); } };
@@ -488,6 +652,9 @@ async function liveStatus() {
   }
   const byRoom = (x, y) => String(x.room || "~").localeCompare(String(y.room || "~"));
   out.lights.sort(byRoom); out.audio.sort(byRoom); out.video.sort(byRoom);
+  const st = await states();
+  out.activeScenes = house.scenes.filter(sc => { try { return sceneActive(sc, st); } catch { return false; } }).map(sc => sc.id);
+  out.rooms = await roomsView();
   out.at = Date.now();
   return out;
 }
@@ -550,11 +717,13 @@ app.get("/api/home", wrap(async (req, res) => {
   res.json({
     version: VERSION, house: house.name, user: userFrom(req).name, language: userFrom(req).language,
     status: { alarm: alarm ? { id: alarm.entity_id, state: alarm.state } : null, locks, climate, openings },
-    scenes: house.scenes.map(s => ({ id: s.id, name: s.name })),
+    scenes: await scenesView(userFrom(req).language),
+    roomCards: await roomsView(),
+    homePhoto: photoUrl("home", "main"),
     rooms: [...rooms.values()].sort((a, b) => b.total - a.total),
     playing,
     events: events.slice(0, 4),
-    alerts: alerts.filter(a => a.t > Date.now() - 48 * 3600e3).slice(0, 3)
+    alerts: alerts.filter(a => a.t > Date.now() - 48 * 3600e3).filter((a, i, all) => all.findIndex(b => norm(b.title) === norm(a.title) && b.message === a.message) === i).slice(0, 2)
   });
 }));
 app.post("/api/scene/:id", wrap(async (req, res) => {
@@ -593,6 +762,55 @@ app.post("/api/media", wrap(async (req, res) => {
   const { entity_id, action } = req.body || {};
   if (!/^media_player\./.test(entity_id) || !["media_pause", "media_play", "media_next_track", "volume_up", "volume_down"].includes(action)) return res.status(400).json({ error: "bad request" });
   await ha.call("media_player", action, { entity_id }); stateCache.at = 0; res.json({ ok: true });
+}));
+app.get("/api/scene/:id", wrap(async (req, res) => {
+  const sc = house.scenes.find(s => s.id === req.params.id);
+  if (!sc) return res.status(404).json({ error: "no scene" });
+  const d = describeScene(sc, await entityInfo(), userFrom(req).language);
+  res.json({ id: sc.id, name: sc.name, mood: sc.mood || guessMood(sc.name), photo: photoUrl("scene", sc.id), ...d, active: sceneActive(sc, await states()) });
+}));
+app.patch("/api/scene/:id", wrap(async (req, res) => {
+  const sc = house.scenes.find(s => s.id === req.params.id);
+  if (!sc) return res.status(404).json({ error: "no scene" });
+  if (req.body?.name) sc.name = String(req.body.name).slice(0, 40);
+  if (MOODS.includes(req.body?.mood)) sc.mood = req.body.mood;
+  saveHouse(); res.json({ ok: true });
+}));
+app.post("/api/capture", wrap(async (req, res) => {
+  const name = String(req.body?.name || "").trim().slice(0, 40);
+  if (!name) return res.status(400).json({ error: "name" });
+  const sc = await captureScene(name, req.body?.rooms);
+  audit({ user: userFrom(req).id, action: "capture", name, actions: sc.actions.length });
+  res.json({ ok: true, id: sc.id });
+}));
+app.post("/api/photo", wrap(async (req, res) => {
+  const { kind, id, data } = req.body || {};
+  if (!["scene", "room", "home"].includes(kind) || !id || !/^data:image\/jpeg;base64,/.test(data || "")) return res.status(400).json({ error: "bad photo" });
+  const f = `${kind}-${String(id).replace(/[^a-z0-9_-]/gi, "_")}.jpg`;
+  fs.writeFileSync(path.join(PHOTO_DIR, f), Buffer.from(data.split(",")[1], "base64"));
+  res.json({ ok: true, url: photoUrl(kind, id) });
+}));
+app.delete("/api/photo", wrap(async (req, res) => {
+  const { kind, id } = req.body || {};
+  try { fs.unlinkSync(path.join(PHOTO_DIR, `${kind}-${String(id).replace(/[^a-z0-9_-]/gi, "_")}.jpg`)); } catch {}
+  res.json({ ok: true });
+}));
+app.get("/api/rooms/:room", wrap(async (req, res) => res.json(await roomDetail(req.params.room))));
+// one control for every device type
+app.post("/api/set", wrap(async (req, res) => {
+  const { entity_id: id, action, value } = req.body || {};
+  const info = await entityInfo(); const it = info.get(id);
+  if (!it) return res.status(403).json({ error: "not exposed" });
+  const d = dom(id); const s = it.s; let call = null;
+  if (d === "light") call = action === "off" ? ["light", "turn_off", {}] : action === "level" ? (Number(value) > 0 ? ["light", "turn_on", { brightness_pct: Math.min(100, Number(value)) }] : ["light", "turn_off", {}]) : ["light", s.state === "on" && action !== "on" ? "turn_off" : "turn_on", {}];
+  else if (d === "switch" || d === "fan") call = [d, action === "off" || (action !== "on" && s.state === "on") ? "turn_off" : "turn_on", {}];
+  else if (d === "cover") call = action === "open" ? ["cover", "open_cover", {}] : action === "close" ? ["cover", "close_cover", {}] : action === "stop" ? ["cover", "stop_cover", {}] : ["cover", "set_cover_position", { position: Math.max(0, Math.min(100, Number(value))) }];
+  else if (d === "climate") call = ["climate", "set_temperature", { temperature: Number(value) }];
+  else if (d === "media_player") call = { play: ["media_player", "media_play", {}], pause: ["media_player", "media_pause", {}], next: ["media_player", "media_next_track", {}], prev: ["media_player", "media_previous_track", {}], volume: ["media_player", "volume_set", { volume_level: Math.max(0, Math.min(1, Number(value) / 100)) }], on: ["media_player", "turn_on", {}], off: ["media_player", "turn_off", {}], source: ["media_player", "select_source", { source: String(value) }] }[action];
+  if (!call) return res.status(400).json({ error: "unsupported" });
+  await ha.call(call[0], call[1], { entity_id: id, ...call[2] });
+  stateCache.at = 0; lastLive = ""; audit({ user: userFrom(req).id, action: `${call[0]}.${call[1]}`, entity: id, value });
+  res.json({ ok: true });
 }));
 app.get("/api/house", wrap(async (_req, res) => res.json(await houseModel())));
 app.get("/api/feed", (_req, res) => res.json(feed.slice(0, 50)));

@@ -3,178 +3,336 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#121316">
+<meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Bina">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>Bina</title>
 <style>
-  :root{--ink:#000;--paper:#fff;--soft:#EDEDEB;--mute:#6B6B6B;--rule:#E2E2E0;--warn:#B3261E;--safe-t:env(safe-area-inset-top);--safe-b:env(safe-area-inset-bottom)}
+  :root{
+    --bg:#121316; --bg2:#1A1C20; --glass:rgba(255,255,255,.075); --glass2:rgba(255,255,255,.12); --line:rgba(255,255,255,.09);
+    --text:#F3F3F1; --mute:rgba(243,243,241,.56); --faint:rgba(243,243,241,.32);
+    --warm:#FFD49A; --warmText:#2A1C08; --red:#FF6B5E; --ok:#9BE3B0;
+    --r-xl:26px; --r-lg:20px; --r-md:14px;
+    --safe-t:env(safe-area-inset-top); --safe-b:env(safe-area-inset-bottom);
+    --display:-apple-system,"SF Pro Display",system-ui,"Segoe UI",Roboto,sans-serif;
+    --body:-apple-system,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;background:var(--paper);color:var(--ink);font-family:-apple-system,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased}
   body{display:flex;flex-direction:column;overflow:hidden}
   button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-  button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-
-  header{display:flex;align-items:baseline;justify-content:space-between;padding:calc(14px + var(--safe-t)) 20px 6px}
-  .wordmark{font-size:13px;font-weight:700;letter-spacing:.42em}
-  .house{font-size:12px;color:var(--mute)}
-  main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-  section{display:none;padding:8px 20px 28px}
+  button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--warm);outline-offset:2px}
+  svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  section{display:none;padding:0 0 32px}
   section.on{display:block}
+  .pad{padding:0 18px}
+  h2.sec{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;margin:30px 18px 12px;display:flex;align-items:center;justify-content:space-between}
 
-  /* home */
-  .hello{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:10px 0 8px}
-  .status{font-size:17px;line-height:1.4;color:var(--mute);max-width:32ch}
-  .status b{color:var(--ink);font-weight:600}
-  .status .warn{color:var(--warn);font-weight:600}
-  .scenes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0 10px}
-  .scene{position:relative;overflow:hidden;min-height:96px;border-radius:18px;background:var(--ink);color:var(--paper);text-align:left;padding:14px 16px;display:flex;align-items:flex-end;font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.15}
-  .scene::after{content:"";position:absolute;inset:0;background:var(--paper);transform:scaleX(0);transform-origin:left;transition:transform .5s ease;mix-blend-mode:difference}
-  .scene.run::after{transform:scaleX(1)}
-  .scene.done{outline:2px solid var(--ink);outline-offset:3px}
-  .scene.add{background:var(--paper);color:var(--ink);border:1.5px dashed #BDBDBB;font-weight:500;font-size:15px}
-  .scene.add::after{display:none}
-  .hint{font-size:12px;color:var(--mute);margin:4px 0 0}
+  /* hero */
+  .hero{position:relative;min-height:calc(270px + var(--safe-t));padding:calc(18px + var(--safe-t)) 18px 22px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+  .hero .bgimg{position:absolute;inset:0;background-size:cover;background-position:center}
+  .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,19,22,.15) 0%,rgba(18,19,22,.35) 45%,var(--bg) 100%)}
+  .hero > *:not(.bgimg){position:relative;z-index:1}
+  .topbar{position:absolute!important;top:calc(14px + var(--safe-t));left:18px;right:18px;display:flex;justify-content:space-between;align-items:center}
+  .wordmark{font-size:12px;font-weight:700;letter-spacing:.42em;opacity:.9}
+  .iconbtn{width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.28);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:grid;place-items:center}
+  .hello{font-family:var(--display);font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1.02}
+  .status{font-size:16px;line-height:1.45;color:rgba(243,243,241,.82);margin-top:8px;max-width:34ch}
+  .status .w{color:var(--red);font-weight:600}
+  .alert{margin:14px 18px 0;background:rgba(255,107,94,.13);border:1px solid rgba(255,107,94,.3);color:#FFC2BB;border-radius:var(--r-md);padding:12px 14px;font-size:14px;line-height:1.4}
+  .alert b{color:var(--red)}
 
-  h2{font-size:13px;font-weight:600;color:var(--mute);margin:30px 0 4px}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--rule);font-size:16px}
-  .row .sub{font-size:13px;color:var(--mute);margin-top:2px}
-  .sw{flex:none;width:52px;height:32px;border-radius:16px;background:var(--soft);position:relative;transition:background .2s}
-  .sw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
-  .sw[aria-checked=true]{background:var(--ink)}
-  .sw[aria-checked=true]::after{transform:translateX(20px)}
-  .mini{flex:none;font-size:14px;font-weight:600;padding:8px 14px;border-radius:999px;border:1.5px solid var(--ink)}
-  .alloff{display:block;width:100%;margin-top:18px;padding:15px;border-radius:14px;border:1.5px solid var(--ink);font-size:16px;font-weight:600}
+  /* glass card */
+  .glass{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .live{margin:0 18px;padding:6px 16px}
+  .livesum{display:flex;align-items:center;gap:10px;padding:12px 0 10px;font-size:15px;color:var(--mute);border-bottom:1px solid var(--line)}
+  .livesum b{color:var(--text);font-weight:600}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+  .dot.on{background:var(--ok);box-shadow:0 0 0 0 rgba(155,227,176,.6);animation:pulse 2.4s infinite}
+  @keyframes pulse{70%{box-shadow:0 0 0 8px rgba(155,227,176,0)}100%{box-shadow:0 0 0 0 rgba(155,227,176,0)}}
+  .lrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .lrow:last-child{border-bottom:0}
+  .lrow .ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--glass2);flex:none}
+  .lrow .ic.warm{background:var(--warm);color:var(--warmText)}
+  .lrow .tx{flex:1;min-width:0}
+  .lrow .nm{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lrow .sub{font-size:13px;color:var(--mute);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lrow .val{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--mute)}
+  .pillbtn{flex:none;font-size:14px;font-weight:600;padding:8px 14px;border-radius:999px;background:var(--glass2)}
+  .more{display:block;width:100%;text-align:center;padding:12px 0 8px;font-size:14px;color:var(--mute);font-weight:500}
+  .quiet{padding:14px 0;color:var(--mute);font-size:15px}
 
-  .event{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule)}
-  .event img{flex:none;width:92px;height:64px;object-fit:cover;border-radius:10px;background:var(--soft)}
+  /* scene cards */
+  .scenes{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 18px}
+  .scene{position:relative;aspect-ratio:4/5;border-radius:var(--r-xl);overflow:hidden;text-align:left;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;isolation:isolate;transition:transform .15s ease;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .scene:active{transform:scale(.97)}
+  .scene .bg{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center}
+  .scene::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.62) 100%)}
+  .scene .nm{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+  .scene .does{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+  .scene .does span{display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(255,255,255,.86);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .scene .does svg.i{width:14px;height:14px}
+  .scene .tag{position:absolute;top:12px;left:12px;font-size:12px;font-weight:600;padding:5px 10px 5px 8px;border-radius:999px;background:var(--warm);color:var(--warmText);display:none;align-items:center;gap:6px}
+  .scene .tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--warmText)}
+  .scene.active .tag{display:inline-flex}
+  .scene.active{box-shadow:0 0 0 2px var(--warm),0 10px 40px -10px rgba(255,212,154,.45)}
+  .scene .info{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.3);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:grid;place-items:center}
+  .scene .info svg.i{width:16px;height:16px}
+  .scene .flash{position:absolute;inset:0;z-index:2;background:radial-gradient(circle at var(--x,50%) var(--y,50%),rgba(255,230,190,.75),rgba(255,230,190,0) 60%);opacity:0;pointer-events:none;transition:opacity .6s}
+  .scene.run .flash{opacity:1;transition:opacity .08s}
+  .scene.new{background:var(--glass);border:1.5px dashed rgba(255,255,255,.18);align-items:center;justify-content:center;text-align:center;gap:8px;color:var(--mute)}
+  .scene.new::before{display:none}
+  .scene.new svg.i{width:28px;height:28px}
+  .scene.new .nm{font-size:17px;color:var(--text)}
+  /* light moods: the colour of the light each scene makes */
+  .m-morning{background:radial-gradient(120% 90% at 20% 0%,#FFD08A 0%,#F08A5D 38%,#5B2A3E 72%,#1D1420 100%)}
+  .m-movie{background:radial-gradient(90% 60% at 50% 20%,#3E5BD6 0%,#1B2457 40%,#0B0E1E 80%)}
+  .m-dinner{background:radial-gradient(90% 80% at 50% 30%,#FFB45C 0%,#B4511E 40%,#3A160A 75%,#160A06 100%)}
+  .m-relax{background:radial-gradient(100% 80% at 70% 10%,#C8B3F0 0%,#6F55A8 40%,#2A1F45 75%,#141019 100%)}
+  .m-away{background:linear-gradient(160deg,#AEB8C2 0%,#5B6773 45%,#1C2126 100%)}
+  .m-night{background:radial-gradient(28px 28px at 78% 18%,#F4F1E6 0 45%,transparent 50%),radial-gradient(110% 90% at 50% 0%,#2C3C7A 0%,#141B3C 50%,#090B16 100%)}
+  .m-party{background:radial-gradient(90% 70% at 20% 10%,#FF6B9D 0%,transparent 60%),radial-gradient(90% 70% at 85% 30%,#8A4DFF 0%,transparent 60%),#1A0E2A}
+  .m-focus{background:linear-gradient(170deg,#F6F7F2 0%,#AFC2D3 45%,#2B3642 100%)}
+  .m-default{background:linear-gradient(165deg,#7D848E 0%,#3A3F47 50%,#16181B 100%)}
+
+  /* rooms */
+  .rooms{display:flex;gap:12px;overflow-x:auto;padding:0 18px 4px;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .rooms::-webkit-scrollbar{display:none}
+  .room{flex:0 0 46%;max-width:200px;aspect-ratio:1/1.1;border-radius:var(--r-lg);overflow:hidden;position:relative;scroll-snap-align:start;text-align:left;padding:12px;display:flex;flex-direction:column;justify-content:flex-end;isolation:isolate}
+  .room .bg{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center}
+  .room::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.65) 100%)}
+  .room .nm{font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .room .st{font-size:12.5px;color:rgba(255,255,255,.8);margin-top:3px;line-height:1.35}
+  .room .lit{position:absolute;top:10px;left:10px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.3);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .room .lit.on{background:var(--warm);color:var(--warmText)}
+  .room .lit svg.i{width:15px;height:15px}
+  .r-off{background:linear-gradient(160deg,#2A2D33 0%,#17191C 100%)}
+  .r-on{background:radial-gradient(110% 90% at 30% 10%,#7A5A35 0%,#3A2C1E 45%,#17140F 100%)}
+
+  .bigbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:calc(100% - 36px);margin:22px 18px 0;padding:16px;border-radius:var(--r-md);background:var(--glass);border:1px solid var(--line);font-size:16px;font-weight:600}
+
+  .event{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .event:last-child{border-bottom:0}
+  .event img{flex:none;width:96px;height:66px;object-fit:cover;border-radius:12px;background:var(--glass2)}
   .event .t{font-size:12px;color:var(--mute)}
   .event .h{font-size:15px;font-weight:600;margin:2px 0}
-  .event .d{font-size:14px;line-height:1.35}
-  .alert{background:#FBEAE9;color:var(--warn);border-radius:12px;padding:12px 14px;font-size:14px;margin-top:14px;line-height:1.4}
+  .event .d{font-size:14px;line-height:1.35;color:rgba(243,243,241,.85)}
 
-  /* live */
-  .livehead{display:flex;align-items:center;gap:8px;margin:26px 0 2px}
-  .livehead h2{margin:0;font-size:20px;color:var(--ink);font-weight:700;letter-spacing:-.01em}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--ink);opacity:.25}
-  .dot.on{opacity:1;animation:beat 2s ease-in-out infinite}
-  @keyframes beat{50%{opacity:.35}}
-  .sum{font-size:15px;color:var(--mute);margin-bottom:6px}
-  .cat{font-size:13px;font-weight:600;color:var(--mute);margin:16px 0 0}
-  .lrow{padding:12px 0;border-bottom:1px solid var(--rule)}
-  .lrow .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .lrow .nm{font-size:16px}
-  .lrow .sub{font-size:13px;color:var(--mute);margin-top:2px}
-  .lrow .lv{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;margin-left:auto;padding-right:4px}
-  .lrow input[type=range]{display:none;width:100%;margin:10px 0 2px;accent-color:#000;height:28px}
-  .lrow.open input[type=range]{display:block}
-  .lrow .top{cursor:pointer}
-  .more{font-size:14px;font-weight:600;padding:12px 0;text-decoration:underline}
-  .quiet{font-size:16px;color:var(--mute);padding:10px 0}
-  @media (prefers-reduced-motion:reduce){.dot.on{animation:none}}
+  /* sheets */
+  .sheet{position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;background:rgba(0,0,0,.5)}
+  .sheet.on{display:flex;animation:fade .18s ease}
+  .sheet .panel{position:relative;width:100%;max-height:92vh;overflow-y:auto;background:var(--bg2);border-radius:28px 28px 0 0;padding:0 0 calc(24px + var(--safe-b));animation:up .26s cubic-bezier(.2,.8,.2,1)}
+  @keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+  @keyframes fade{from{background:rgba(0,0,0,0)}}
+  .grab{width:38px;height:5px;border-radius:3px;background:rgba(255,255,255,.22);margin:10px auto 0;position:relative;z-index:3}
+  .shead{position:relative;min-height:170px;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;overflow:hidden;border-radius:28px 28px 0 0;margin-top:-15px;isolation:isolate}
+  .shead .bg{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center}
+  .shead::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(26,28,32,0) 20%,var(--bg2) 100%)}
+  .shead h3{font-family:var(--display);font-size:30px;font-weight:700;letter-spacing:-.03em}
+  .shead p{color:var(--mute);font-size:15px;margin-top:4px}
+  .shead .x{position:absolute;top:22px;right:16px}
+  .sbody{padding:4px 18px 0}
+  .sh3{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;padding:18px 18px 6px}
+  .group{font-size:13px;font-weight:600;color:var(--mute);margin:18px 0 6px}
+  .row2{display:flex;gap:10px;margin-top:16px}
+  .row2 > *{flex:1}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px;border-radius:var(--r-md);font-size:16px;font-weight:600;background:var(--glass2)}
+  .btn.primary{background:var(--warm);color:var(--warmText)}
+  .btn.danger{color:var(--red)}
+  .choice{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px;border-radius:var(--r-md);background:var(--glass);border:1px solid var(--line);margin-top:10px}
+  .choice .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--glass2);flex:none}
+  .choice b{display:block;font-size:16px}
+  .choice small{display:block;color:var(--mute);font-size:13.5px;margin-top:2px;line-height:1.35}
+  .field{width:100%;font:inherit;font-size:17px;padding:14px 16px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--glass);color:var(--text);outline:none;margin-top:10px}
+  .field:focus{border-color:rgba(255,212,154,.6)}
+  .moods{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .moods button{width:44px;height:44px;border-radius:12px;border:2px solid transparent}
+  .moods button[aria-pressed=true]{border-color:var(--warm)}
+  .sug{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+  .sug .sw{width:46px;height:46px;border-radius:12px;flex:none}
+  .sug .tx{flex:1;min-width:0}
+  .sug .tx b{display:block}
+  .sug .tx small{color:var(--mute);font-size:13.5px}
+
+  /* device controls inside a room */
+  .dev{padding:12px 0;border-bottom:1px solid var(--line)}
+  .dev:last-child{border-bottom:0}
+  .dev .top{display:flex;align-items:center;gap:12px}
+  .dev .ic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--glass2);flex:none}
+  .dev .ic.warm{background:var(--warm);color:var(--warmText)}
+  .dev .tx{flex:1;min-width:0}
+  .dev .nm{font-size:16px}
+  .dev .sub{font-size:13px;color:var(--mute);margin-top:1px}
+  .slider{position:relative;height:46px;border-radius:14px;background:var(--glass2);margin-top:10px;overflow:hidden;touch-action:none;cursor:pointer}
+  .slider .fill{position:absolute;inset:0 auto 0 0;background:var(--warm)}
+  .slider.cool .fill{background:#DCE6F2}
+  .slider .lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:14px;font-weight:600;color:var(--text);mix-blend-mode:difference;pointer-events:none}
+  .toggle{flex:none;width:54px;height:32px;border-radius:16px;background:var(--glass2);position:relative;transition:background .2s}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .2s}
+  .toggle[aria-checked=true]{background:var(--warm)}
+  .toggle[aria-checked=true]::after{transform:translateX(22px)}
+  .seg{display:flex;gap:8px;margin-top:10px}
+  .seg button{flex:1;padding:12px 0;border-radius:12px;background:var(--glass2);font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px}
+  .thermo{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+  .thermo .big{font-family:var(--display);font-size:46px;font-weight:300;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .thermo button{width:52px;height:52px;border-radius:50%;background:var(--glass2);font-size:26px;font-weight:300}
+  .chips{display:flex;gap:8px;overflow-x:auto;margin-top:10px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chips button{flex:none;padding:9px 14px;border-radius:999px;background:var(--glass2);font-size:14px;font-weight:500}
+  .chips button[aria-pressed=true]{background:var(--warm);color:var(--warmText)}
+  .np{display:flex;gap:12px;align-items:center;margin-top:10px}
+  .np img{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--glass2)}
+  .np .ctl{display:flex;gap:6px;margin-left:auto}
+  .np .ctl button{width:44px;height:44px;border-radius:50%;background:var(--glass2);display:grid;place-items:center}
 
   /* talk */
-  #talk{padding-bottom:12px}
-  .msg{max-width:86%;margin:0 0 12px;font-size:17px;line-height:1.4;white-space:pre-wrap}
-  .msg.me{margin-left:auto;background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:18px 18px 4px 18px}
+  #talk{padding:calc(16px + var(--safe-t)) 18px 12px}
+  .ttl{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-.03em;margin:8px 0 14px}
+  .msg{max-width:86%;margin:0 0 12px;font-size:17px;line-height:1.42;white-space:pre-wrap}
+  .msg.me{margin-left:auto;background:var(--warm);color:var(--warmText);padding:10px 14px;border-radius:20px 20px 6px 20px}
   .msg.bina{padding:2px 0}
-  .msg img{display:block;width:100%;max-width:340px;border-radius:12px;margin-top:8px}
+  .msg img{display:block;width:100%;max-width:340px;border-radius:14px;margin-top:8px}
   .typing{color:var(--mute)}
-  .card{background:var(--soft);padding:14px 16px;border-radius:14px;margin:8px 0 14px;font-size:15px}
+  .card{background:var(--glass);border:1px solid var(--line);padding:14px 16px;border-radius:var(--r-md);margin:8px 0 14px;font-size:15px}
   .card b{display:block;margin-bottom:4px}
-  .card .pair{display:flex;gap:10px;margin-top:12px}
-  .card .pair button{flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--ink);font-weight:600}
-  .card .pair .yes{background:var(--ink);color:var(--paper)}
+  .card .row2 .btn{padding:12px}
   .tips{color:var(--mute);font-size:15px;line-height:1.6;margin:6px 0 18px}
-  form{display:none;gap:8px;padding:10px 16px 10px;border-top:1px solid var(--rule);background:var(--paper)}
+  form{display:none;gap:8px;padding:10px 14px;border-top:1px solid var(--line);background:var(--bg)}
   body.talking form{display:flex}
-  input{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 16px;border:1px solid var(--rule);border-radius:999px;outline:none;background:var(--paper)}
-  input:focus{border-color:var(--ink)}
-  form button{flex:none;width:48px;height:48px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:20px}
-  form .mic{background:var(--paper);color:var(--ink);border:1.5px solid var(--ink)}
-  form .mic.live{background:var(--warn);border-color:var(--warn);color:#fff}
+  form input{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 16px;border:1px solid var(--line);border-radius:999px;outline:none;background:var(--glass);color:var(--text)}
+  form button{flex:none;width:48px;height:48px;border-radius:50%;background:var(--warm);color:var(--warmText);display:grid;place-items:center}
+  form .mic{background:var(--glass2);color:var(--text)}
+  form .mic.live{background:var(--red);color:#fff}
 
-  /* tabs */
-  nav{display:flex;border-top:1px solid var(--rule);padding:6px 8px calc(6px + var(--safe-b));background:var(--paper)}
-  nav button{flex:1;padding:8px 0;font-size:13px;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:3px}
-  nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8}
-  nav button[aria-selected=true]{color:var(--ink);font-weight:600}
+  /* activity */
+  #activity{padding:calc(16px + var(--safe-t)) 0 24px}
+  #activity .ttl{margin:8px 18px 14px}
+  .list{margin:0 18px;padding:2px 16px}
 
-  /* sheet */
-  .sheet{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-end;z-index:5}
-  .sheet.on{display:flex}
-  .sheet .panel{background:var(--paper);width:100%;max-height:82vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:18px 20px calc(20px + var(--safe-b))}
-  .sheet h3{font-size:20px;margin-bottom:12px}
-  .sug{padding:12px 0;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;gap:12px}
-  .sug .n{font-weight:600}
-  .sug .s{font-size:14px;color:var(--mute);margin-top:2px}
-  .close{display:block;width:100%;margin-top:16px;padding:14px;border-radius:12px;background:var(--soft);font-weight:600}
-  .toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
-  .toast.on{opacity:1}
-  .empty{color:var(--mute);font-size:15px;padding:24px 0}
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  /* tab bar */
+  nav{display:flex;padding:6px 10px calc(6px + var(--safe-b));background:rgba(18,19,22,.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--line)}
+  nav button{flex:1;padding:8px 0 4px;font-size:11.5px;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:500}
+  nav button svg.i{width:24px;height:24px}
+  nav button[aria-selected=true]{color:var(--text)}
+  .toast{position:fixed;left:50%;bottom:calc(92px + var(--safe-b));transform:translateX(-50%) translateY(10px);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:all .22s;pointer-events:none;z-index:40;white-space:nowrap}
+  .toast.on{opacity:1;transform:translateX(-50%)}
+  .empty{color:var(--mute);font-size:15px;padding:16px 0}
+  @media (min-width:700px){.scenes{grid-template-columns:repeat(3,1fr)}.room{flex-basis:30%}}
+  @media (min-width:1000px){.scenes{grid-template-columns:repeat(4,1fr)}main{max-width:1100px;margin:0 auto;width:100%}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<header>
-  <div class="wordmark">BINA</div>
-  <div class="house" id="houseName"></div>
-</header>
 <main>
   <section id="home" class="on"></section>
-  <section id="talk"><div id="log"></div></section>
+  <section id="talk"><p class="ttl" data-t="tTalk"></p><div id="log"></div></section>
   <section id="activity"></section>
 </main>
 <form id="f" autocomplete="off">
   <input id="in" enterkeyhint="send" aria-label="Mensaje">
-  <button type="button" class="mic" id="mic" aria-label="Hablar">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-  </button>
-  <button type="submit" aria-label="Enviar">↑</button>
+  <button type="button" class="mic" id="mic" aria-label="Hablar"></button>
+  <button type="submit" aria-label="Enviar" id="sendBtn"></button>
 </form>
 <nav role="tablist">
-  <button role="tab" aria-selected="true" data-tab="home"><svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9H4z"/></svg><span data-t="tHome"></span></button>
-  <button role="tab" data-tab="talk"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span data-t="tTalk"></span></button>
-  <button role="tab" data-tab="activity"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg><span data-t="tAct"></span></button>
+  <button role="tab" aria-selected="true" data-tab="home"><span data-icon="home"></span><span data-t="tHome"></span></button>
+  <button role="tab" data-tab="talk"><span data-icon="chat"></span><span data-t="tTalk"></span></button>
+  <button role="tab" data-tab="activity"><span data-icon="clock"></span><span data-t="tAct"></span></button>
 </nav>
 <div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
+<input type="file" accept="image/*" id="filePick" hidden>
 <div class="toast" id="toast"></div>
 
 <script>
+// ---------- icons ----------
+const P = {
+  home: '<path d="M3.5 10.5 12 3.5l8.5 7V20a.5.5 0 0 1-.5.5h-5v-6h-6v6H4a.5.5 0 0 1-.5-.5z"/>',
+  chat: '<path d="M4 5.5h16v10.5H10l-5 4v-4H4z"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  light: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>',
+  lightoff: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/><path d="M4 4l16 16"/>',
+  speaker: '<rect x="6" y="3" width="12" height="18" rx="2.5"/><circle cx="12" cy="14" r="3"/><circle cx="12" cy="7.5" r=".8"/>',
+  music: '<path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
+  tv: '<rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M8 20.5h8"/>',
+  shade: '<path d="M4 4h16M5 4v10h14V4M12 14v3M10.5 17h3"/><path d="M5 7.5h14M5 11h14" opacity=".5"/>',
+  climate: '<path d="M12 3.5a2 2 0 0 0-2 2v8.3a4 4 0 1 0 4 0V5.5a2 2 0 0 0-2-2z"/><path d="M12 10v6"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+  alarm: '<path d="M12 3.5 4.5 6.5v5.5c0 4.5 3.2 7.6 7.5 8.6 4.3-1 7.5-4.1 7.5-8.6V6.5z"/>',
+  fan: '<circle cx="12" cy="12" r="1.6"/><path d="M12 10.4C11 6 13 3.5 15.5 4.5S16 9.5 13.4 11.3M13.6 12c4.4-1 6.9 1 5.9 3.5S14.5 16 12.7 13.4M12 13.6c1 4.4-1 6.9-3.5 5.9S8 14.5 10.6 12.7M10.4 12C6 13 3.5 11 4.5 8.5S9.5 8 11.3 10.6"/>',
+  scene: '<path d="M12 3.5 14 9l5.5 2-5.5 2-2 5.5-2-5.5-5.5-2L10 9z"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  sparkle: '<path d="M12 3.5 14 9l5.5 2-5.5 2-2 5.5-2-5.5-5.5-2L10 9z"/><path d="M19 3v4M17 5h4"/>',
+  capture: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/>',
+  image: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m20.5 16-5-5-8 8"/>',
+  power: '<path d="M12 3.5v8M7 6.6a7 7 0 1 0 10 0"/>',
+  play: '<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
+  pause: '<path d="M8 5.5v13M16 5.5v13" stroke-width="3"/>',
+  next: '<path d="M6 5.5v13l9-6.5zM18 5.5v13" fill="currentColor"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.4"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  send: '<path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>',
+  door: '<path d="M6 20.5V4.5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v16M4 20.5h16M14.5 12.5v.5"/>',
+  camera: '<path d="M3.5 8.5a1 1 0 0 1 1-1h3l1.5-2h6l1.5 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><circle cx="12" cy="13" r="3.5"/>',
+  switch: '<rect x="7" y="3.5" width="10" height="17" rx="2"/><path d="M12 7.5v4"/>',
+  edit: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/>',
+  trash: '<path d="M4.5 6.5h15M9 6.5V4.5h6v2M6.5 6.5l1 13.5h9l1-13.5"/>'
+};
+const ic = (n, cls = "i") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || P.scene}</svg>`;
+
+// ---------- basics ----------
 const USER = localStorage.getItem("bina_user") || "owner";
 const H = { "Content-Type": "application/json", "X-Bina-User": USER };
 const $ = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const api = (p, o = {}) => fetch(p, { headers: H, ...o }).then(r => r.json());
+const post = (p, body, method = "POST") => api(p, { method, body: JSON.stringify(body || {}) });
+const buzz = (ms = 12) => { try { navigator.vibrate?.(ms); } catch {} };
 let LANG = "es";
 const T = {
   es: { tHome: "Inicio", tTalk: "Hablar", tAct: "Actividad", morning: "Buenos días", afternoon: "Buenas tardes", evening: "Buenas noches",
     alarm: { disarmed: "Alarma desarmada", armed_home: "Alarma armada en casa", armed_away: "Alarma armada fuera", armed_night: "Alarma armada de noche", triggered: "ALARMA ACTIVADA", arming: "Armando alarma", pending: "Alarma pendiente" },
     closed: "Todo cerrado", open: (l) => `Abierto: ${l}`, unlocked: (l) => `Sin seguro: ${l}`, inside: "adentro",
-    scenes: "Escenas", addScene: "Sugerir escenas", holdHint: "Mantén presionado un botón para borrarlo.", rooms: "Luces", of: (a, b) => `${a} de ${b} prendidas`, allOff: "Apagar todo", playing: "Sonando", pause: "Pausa",
-    recent: "Reciente", seeAll: "Ver todo", noEvents: "Sin novedades.", ph: "Dile a Bina…", hi: "Hola. Pídeme lo que quieras para la casa.",
-    tips: "Prueba: \"pon jazz en la piscina al 20\", \"¿hay alguna puerta abierta?\", \"modo cena es cocina al 60 y jazz suave\", \"¿quién vino hoy?\"",
-    confirm: "¿Confirmas?", routine: "¿Agrego esta rutina?", cancel: "Cancelar", ok: "Confirmar", offline: "No llego a la casa. Revisa que estés en el WiFi o que Nabu Casa esté activo.",
-    suggesting: "Pensando escenas para tu casa…", sugTitle: "Escenas para tu casa", add: "Agregar", added: "Agregado", close: "Cerrar", delQ: (n) => `¿Borrar "${n}"?`,
-    brief: "Resumen de hoy", writing: "Escribiendo…", alerts: "Avisos", act: "Timbre y cámaras", feed: "Conversación", sceneDone: (n) => `${n} listo`, sceneFail: (n) => `${n}: algo no respondió`, now: "Ahora mismo", catL: "Iluminación", catA: "Audio", catV: "Video", catC: "Clima", catS: "Persianas", catO: "Otros", nothingOn: "Todo apagado. Nada sonando.", off: "Apagar", seeAllN: (n) => `Ver las ${n}`, nL: (n) => `${n} ${n === 1 ? "luz" : "luces"}`, nA: (n) => `${n} audio`, nV: (n) => `${n} ${n === 1 ? "tele" : "teles"}`, hvac: { cool: "Enfriando", heat: "Calentando", heat_cool: "Auto", auto: "Auto", off: "Apagado", dry: "Seco", fan_only: "Ventilador" }, to: "a", playingS: "sonando", pausedS: "en pausa", vol: "vol", muted: "silencio", openS: "abierta" },
+    now: "Ahora mismo", scenes: "Escenas", rooms: "Cuartos", recent: "Reciente", allOff: "Apagar todo", seeAll: "Ver todo", less: "Ver menos",
+    nothingOn: "Todo apagado. Nada sonando.", nL: (n) => `${n} ${n === 1 ? "luz" : "luces"}`, nA: (n) => `${n} audio`, nV: (n) => `${n} ${n === 1 ? "tele" : "teles"}`,
+    hvac: { cool: "Enfriando", heat: "Calentando", heat_cool: "Auto", auto: "Auto", off: "Apagado", dry: "Seco", fan_only: "Ventilador" }, to: "a",
+    active: "Activa", newScene: "Nueva escena", capture: "Guardar la casa como está", captureSub: "Guarda luces, persianas, clima y música tal como están ahora.",
+    suggest: "Sugerir con Bina", suggestSub: "Bina propone escenas con los equipos de tu casa.", sceneName: "Nombre de la escena", save: "Guardar", saved: "Guardada",
+    run: "Activar", rename: "Cambiar nombre", photo: "Poner foto", removePhoto: "Quitar foto", del: "Borrar escena", delQ: (n) => `¿Borrar "${n}"?`, cancel: "Cancelar", ok: "Confirmar", close: "Cerrar",
+    whatDoes: "Qué hace", mood: "Luz de la tarjeta", suggesting: "Pensando escenas para tu casa…", add: "Agregar", added: "Agregada",
+    sceneDone: (n) => `${n} activada`, sceneFail: (n) => `${n}: algo no respondió`, off: "Apagar", on: "Prender", pause: "Pausa", play: "Play",
+    lightsOn: (a, b) => `${a} de ${b} ${b === 1 ? "luz" : "luces"}`, allLightsOff: "Luces apagadas", openN: (n) => `${n} ${n === 1 ? "abierta" : "abiertas"}`, roomPhoto: "Foto del cuarto", homePhoto: "Foto de la casa",
+    openS: "Abrir", closeS: "Cerrar", stop: "Parar", openState: "Abierta", closedState: "Cerrada", locked: "Con llave", unlockedS: "Sin llave",
+    ph: "Dile a Bina…", hi: "Hola. Pídeme lo que quieras para la casa.", tips: "Prueba: \"pon jazz en la piscina al 20\", \"¿hay alguna puerta abierta?\", \"modo cena es cocina al 60 y jazz suave\", \"¿quién vino hoy?\"",
+    confirm: "¿Confirmas?", routine: "¿Agrego esta rutina?", offline: "No llego a la casa. Revisa el WiFi o que el acceso remoto esté activo.",
+    brief: "Resumen de hoy", writing: "Escribiendo…", alerts: "Avisos", act: "Timbre y cámaras", feed: "Conversación", noEvents: "Sin novedades.", upload: "Subiendo foto…", noDevices: "No hay equipos en este cuarto." },
   en: { tHome: "Home", tTalk: "Talk", tAct: "Activity", morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening",
     alarm: { disarmed: "Alarm off", armed_home: "Alarm armed home", armed_away: "Alarm armed away", armed_night: "Alarm armed night", triggered: "ALARM TRIGGERED", arming: "Alarm arming", pending: "Alarm pending" },
     closed: "Everything closed", open: (l) => `Open: ${l}`, unlocked: (l) => `Unlocked: ${l}`, inside: "inside",
-    scenes: "Scenes", addScene: "Suggest scenes", holdHint: "Press and hold a button to remove it.", rooms: "Lights", of: (a, b) => `${a} of ${b} on`, allOff: "Turn everything off", playing: "Playing", pause: "Pause",
-    recent: "Recent", seeAll: "See all", noEvents: "Nothing new.", ph: "Tell Bina…", hi: "Hi. Ask me for anything in the house.",
-    tips: "Try: \"play jazz by the pool at 20\", \"is any door open?\", \"dinner mode is kitchen at 60 and soft jazz\", \"who came today?\"",
-    confirm: "Confirm?", routine: "Add this routine?", cancel: "Cancel", ok: "Confirm", offline: "Can't reach the house. Check you're on the WiFi or that remote access is on.",
-    suggesting: "Thinking of scenes for your house…", sugTitle: "Scenes for your house", add: "Add", added: "Added", close: "Close", delQ: (n) => `Remove "${n}"?`,
-    brief: "Today's brief", writing: "Writing…", alerts: "Alerts", act: "Doorbell and cameras", feed: "Conversation", sceneDone: (n) => `${n} done`, sceneFail: (n) => `${n}: something didn't respond`, now: "Right now", catL: "Lighting", catA: "Audio", catV: "Video", catC: "Climate", catS: "Shades", catO: "Other", nothingOn: "Everything off. Nothing playing.", off: "Turn off", seeAllN: (n) => `See all ${n}`, nL: (n) => `${n} ${n === 1 ? "light" : "lights"}`, nA: (n) => `${n} audio`, nV: (n) => `${n} TV`, hvac: { cool: "Cooling", heat: "Heating", heat_cool: "Auto", auto: "Auto", off: "Off", dry: "Dry", fan_only: "Fan" }, to: "to", playingS: "playing", pausedS: "paused", vol: "vol", muted: "muted", openS: "open" }
+    now: "Right now", scenes: "Scenes", rooms: "Rooms", recent: "Recent", allOff: "Turn everything off", seeAll: "See all", less: "Show less",
+    nothingOn: "Everything off. Nothing playing.", nL: (n) => `${n} ${n === 1 ? "light" : "lights"}`, nA: (n) => `${n} audio`, nV: (n) => `${n} TV`,
+    hvac: { cool: "Cooling", heat: "Heating", heat_cool: "Auto", auto: "Auto", off: "Off", dry: "Dry", fan_only: "Fan" }, to: "to",
+    active: "Active", newScene: "New scene", capture: "Save the house as it is", captureSub: "Saves lights, shades, climate and music exactly as they are now.",
+    suggest: "Suggest with Bina", suggestSub: "Bina proposes scenes using your devices.", sceneName: "Scene name", save: "Save", saved: "Saved",
+    run: "Activate", rename: "Rename", photo: "Add photo", removePhoto: "Remove photo", del: "Delete scene", delQ: (n) => `Delete "${n}"?`, cancel: "Cancel", ok: "Confirm", close: "Close",
+    whatDoes: "What it does", mood: "Card light", suggesting: "Thinking of scenes for your house…", add: "Add", added: "Added",
+    sceneDone: (n) => `${n} on`, sceneFail: (n) => `${n}: something didn't respond`, off: "Turn off", on: "Turn on", pause: "Pause", play: "Play",
+    lightsOn: (a, b) => `${a} of ${b} ${b === 1 ? "light" : "lights"}`, allLightsOff: "Lights off", openN: (n) => `${n} open`, roomPhoto: "Room photo", homePhoto: "House photo",
+    openS: "Open", closeS: "Close", stop: "Stop", openState: "Open", closedState: "Closed", locked: "Locked", unlockedS: "Unlocked",
+    ph: "Tell Bina…", hi: "Hi. Ask me for anything in the house.", tips: "Try: \"play jazz by the pool at 20\", \"is any door open?\", \"dinner mode is kitchen at 60 and soft jazz\", \"who came today?\"",
+    confirm: "Confirm?", routine: "Add this routine?", offline: "Can't reach the house. Check the WiFi or remote access.",
+    brief: "Today's brief", writing: "Writing…", alerts: "Alerts", act: "Doorbell and cameras", feed: "Conversation", noEvents: "Nothing new.", upload: "Uploading photo…", noDevices: "No devices in this room." }
 };
 const t = (k) => (T[LANG] || T.es)[k];
 function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 2200); }
 const when = (ts) => new Date(ts).toLocaleString(LANG === "es" ? "es-US" : "en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+const bgStyle = (photo) => photo ? `style="background-image:url('${esc(photo)}')"` : "";
 
-// tabs
+// ---------- tabs ----------
 function show(tab) {
   document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === tab));
   document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === tab));
@@ -186,36 +344,71 @@ function show(tab) {
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.tab));
 
 // ---------- home ----------
-let HOME = null;
+let HOME = null, LIVE = null, liveExpanded = false;
 async function loadHome() {
-  let h; try { h = await api("api/home"); } catch { $("#home").innerHTML = `<p class="hello">Bina</p><p class="status">${t("offline")}</p>`; return; }
-  HOME = h;
+  let h; try { h = await api("api/home"); } catch { $("#home").innerHTML = `<div class="hero"><p class="hello">Bina</p><p class="status">${t("offline")}</p></div>`; return; }
+  HOME = h; renderHome();
+}
+function statusLine() {
+  const s = HOME.status, parts = [];
+  if (s.alarm) { const a = t("alarm")[s.alarm.state] || s.alarm.state; parts.push(s.alarm.state === "triggered" ? `<span class="w">${a}</span>` : a); }
+  parts.push(s.openings.length ? `<span class="w">${t("open")(esc(s.openings.join(", ")))}</span>` : t("closed"));
+  const unlocked = (s.locks || []).filter(l => l.state === "unlocked");
+  if (unlocked.length) parts.push(`<span class="w">${t("unlocked")(esc(unlocked.map(l => l.name).join(", ")))}</span>`);
+  if (s.climate?.[0]?.current != null) parts.push(`${Math.round(s.climate[0].current)}° ${t("inside")}`);
+  return parts.join(". ") + ".";
+}
+function renderHome() {
+  const h = HOME;
   const hr = new Date().getHours();
   const greet = hr < 12 ? t("morning") : hr < 19 ? t("afternoon") : t("evening");
-  const s = h.status, parts = [];
-  if (s.alarm) { const a = t("alarm")[s.alarm.state] || s.alarm.state; parts.push(s.alarm.state === "triggered" ? `<span class="warn">${a}</span>` : `<b>${a}</b>`); }
-  parts.push(s.openings.length ? `<span class="warn">${t("open")(esc(s.openings.join(", ")))}</span>` : t("closed"));
-  const unlocked = s.locks.filter(l => l.state === "unlocked");
-  if (unlocked.length) parts.push(`<span class="warn">${t("unlocked")(esc(unlocked.map(l => l.name).join(", ")))}</span>`);
-  if (s.climate[0]?.current != null) parts.push(`${Math.round(s.climate[0].current)}° ${t("inside")}`);
-  const scenes = h.scenes.map(sc => `<button class="scene" data-id="${esc(sc.id)}" data-name="${esc(sc.name)}">${esc(sc.name)}</button>`).join("");
-  const rooms = h.rooms.map(r => `<div class="row"><div><div>${esc(r.room)}</div><div class="sub">${t("of")(r.on, r.total)}</div></div><button class="sw" role="switch" aria-checked="${r.on > 0}" aria-label="${esc(r.room)}" data-room="${esc(r.room)}"></button></div>`).join("");
-  const playing = h.playing.map(p => `<div class="row"><div><div>${esc(p.room || p.name)}</div><div class="sub">${esc([p.title, p.artist].filter(Boolean).join(", "))}</div></div><button class="mini" data-pause="${esc(p.id)}">${t("pause")}</button></div>`).join("");
-  const evs = h.events.length ? h.events.map(eventRow).join("") : `<p class="empty">${t("noEvents")}</p>`;
-  const al = h.alerts.map(a => `<div class="alert"><b>${esc(a.title)}</b><br>${esc(a.message)}</div>`).join("");
-  $("#houseName").textContent = h.house;
+  const heroBg = h.homePhoto ? `<div class="bgimg" ${bgStyle(h.homePhoto)}></div>` : `<div class="bgimg m-${hr < 7 || hr >= 19 ? "night" : hr < 12 ? "morning" : "away"}"></div>`;
+  const al = (h.alerts || []).map(a => `<div class="alert"><b>${esc(a.title)}</b> ${esc(a.message)}</div>`).join("");
   $("#home").innerHTML = `
-    <p class="hello">${greet}, ${esc(h.user)}</p>
-    <p class="status">${parts.join(". ")}.</p>
+    <div class="hero">${heroBg}
+      <div class="topbar"><span class="wordmark">BINA</span><button class="iconbtn" id="homePhotoBtn" aria-label="${t("homePhoto")}">${ic("image")}</button></div>
+      <p class="hello">${greet}, ${esc(h.user)}</p>
+      <p class="status" id="statusLine">${statusLine()}</p>
+    </div>
     ${al}
-    <div class="livehead"><span class="dot" id="liveDot"></span><h2>${t("now")}</h2></div>
-    <div id="live">${LIVE ? liveHTML(LIVE) : `<p class="quiet">…</p>`}</div>
-    <div class="scenes">${scenes}<button class="scene add" id="suggest">${t("addScene")}</button></div>
-    ${h.scenes.length ? `<p class="hint">${t("holdHint")}</p>` : ""}
-    <h2>${t("rooms")}</h2>${rooms}
-    <button class="alloff" id="alloff">${t("allOff")}</button>
-    <h2>${t("recent")}</h2>${evs}`;
-  bindHome(); bindLive();
+    <div class="glass live" id="live">${LIVE ? liveHTML(LIVE) : `<p class="quiet">…</p>`}</div>
+    <h2 class="sec">${t("scenes")}</h2>
+    <div class="scenes" id="scenes">${scenesHTML(h.scenes)}</div>
+    <h2 class="sec">${t("rooms")}</h2>
+    <div class="rooms" id="rooms">${roomsHTML(h.roomCards || [])}</div>
+    <button class="bigbtn" id="alloff">${ic("power")} ${t("allOff")}</button>
+    ${h.events?.length ? `<h2 class="sec">${t("recent")}</h2><div class="glass list">${h.events.map(eventRow).join("")}</div>` : ""}`;
+  bindHome();
+}
+
+// scene cards: what each one does, in icons and a few words
+function scenesHTML(list) {
+  const cards = list.map(sc => `
+    <button class="scene${sc.active ? " active" : ""}" data-id="${esc(sc.id)}" data-name="${esc(sc.name)}" aria-label="${esc(sc.name)}">
+      <div class="bg ${sc.photo ? "" : "m-" + esc(sc.mood)}" ${bgStyle(sc.photo)}></div>
+      <span class="tag">${t("active")}</span>
+      <span class="info" data-info="${esc(sc.id)}" role="button" aria-label="${t("whatDoes")}">${ic("info")}</span>
+      <span class="nm">${esc(sc.name)}</span>
+      <span class="does">${(sc.parts || []).slice(0, 3).map(p => `<span>${ic(p.kind === "lightoff" ? "lightoff" : p.kind)}${esc(p.text)}</span>`).join("")}</span>
+      <span class="flash"></span>
+    </button>`).join("");
+  return cards + `<button class="scene new" id="newScene">${ic("plus")}<span class="nm">${t("newScene")}</span></button>`;
+}
+function roomsHTML(list) {
+  return list.map(r => {
+    const bits = [];
+    bits.push(r.lights ? (r.lightsOn ? t("lightsOn")(r.lightsOn, r.lights) : t("allLightsOff")) : "");
+    if (r.playing) bits.push("♪ " + r.playing);
+    if (r.tvOn) bits.push("TV");
+    if (r.temp != null) bits.push(r.temp + "°");
+    if (r.open) bits.push(t("openN")(r.open));
+    const lit = r.lightsOn > 0;
+    return `<button class="room" data-room="${esc(r.room)}">
+      <div class="bg ${r.photo ? "" : lit ? "r-on" : "r-off"}" ${bgStyle(r.photo)}></div>
+      <span class="lit${lit ? " on" : ""}">${ic("light")}</span>
+      <span class="nm">${esc(r.room)}</span><span class="st">${esc(bits.filter(Boolean).join(" · "))}</span>
+    </button>`;
+  }).join("");
 }
 function eventRow(e) {
   return `<div class="event">${e.image ? `<img src="${esc(e.image)}" alt="" loading="lazy">` : ""}<div><div class="t">${when(e.t)}</div><div class="h">${esc(e.title)}</div><div class="d">${esc(e.text || "")}</div></div></div>`;
@@ -223,108 +416,212 @@ function eventRow(e) {
 function bindHome() {
   document.querySelectorAll(".scene[data-id]").forEach(b => {
     let timer = null, long = false;
-    const start = () => { long = false; timer = setTimeout(async () => { long = true; if (confirm(t("delQ")(b.dataset.name))) { await api(`api/scene/${encodeURIComponent(b.dataset.id)}`, { method: "DELETE" }); loadHome(); } }, 700); };
+    const start = () => { long = false; timer = setTimeout(() => { long = true; buzz(20); openScene(b.dataset.id); }, 550); };
     const end = () => clearTimeout(timer);
-    b.addEventListener("touchstart", start, { passive: true }); b.addEventListener("touchend", end); b.addEventListener("mousedown", start); b.addEventListener("mouseup", end); b.addEventListener("mouseleave", end);
-    b.onclick = async () => {
+    b.addEventListener("touchstart", start, { passive: true }); b.addEventListener("touchend", end); b.addEventListener("touchmove", end, { passive: true });
+    b.addEventListener("mousedown", start); b.addEventListener("mouseup", end); b.addEventListener("mouseleave", end);
+    b.addEventListener("contextmenu", (e) => e.preventDefault());
+    b.onclick = async (e) => {
       if (long) return;
-      b.classList.add("run");
-      let r; try { r = await api(`api/scene/${encodeURIComponent(b.dataset.id)}`, { method: "POST" }); } catch { r = { ok: false }; }
-      b.classList.remove("run"); b.classList.add("done"); setTimeout(() => b.classList.remove("done"), 1200);
+      if (e.target.closest("[data-info]")) { openScene(b.dataset.id); return; }
+      const r0 = b.getBoundingClientRect(); b.style.setProperty("--x", ((e.clientX || r0.left + r0.width / 2) - r0.left) + "px"); b.style.setProperty("--y", ((e.clientY || r0.top + r0.height / 2) - r0.top) + "px");
+      b.classList.add("run"); buzz();
+      setTimeout(() => b.classList.remove("run"), 450);
+      let r; try { r = await post(`api/scene/${encodeURIComponent(b.dataset.id)}`); } catch { r = { ok: false }; }
+      document.querySelectorAll(".scene.active").forEach(x => x.classList.remove("active")); b.classList.add("active");
       toast(r.ok ? t("sceneDone")(b.dataset.name) : t("sceneFail")(b.dataset.name));
       if (r.confirmations?.length) { show("talk"); r.confirmations.forEach(confirmCard); }
-      setTimeout(loadHome, 1500);
+      setTimeout(refreshLive, 1500);
     };
   });
-  document.querySelectorAll(".sw[data-room]").forEach(b => b.onclick = async () => {
-    const on = b.getAttribute("aria-checked") !== "true";
-    b.setAttribute("aria-checked", on);
-    await api("api/room", { method: "POST", body: JSON.stringify({ room: b.dataset.room, on }) }).catch(() => toast(t("offline")));
-    setTimeout(loadHome, 1200);
-  });
-  document.querySelectorAll("[data-pause]").forEach(b => b.onclick = async () => { await api("api/media", { method: "POST", body: JSON.stringify({ entity_id: b.dataset.pause, action: "media_pause" }) }); setTimeout(loadHome, 800); });
-  $("#alloff").onclick = async () => { $("#alloff").textContent = "…"; await api("api/alloff", { method: "POST" }).catch(() => {}); toast(t("allOff")); setTimeout(loadHome, 1000); };
-  $("#suggest").onclick = suggest;
+  $("#newScene").onclick = newSceneSheet;
+  document.querySelectorAll(".room[data-room]").forEach(b => b.onclick = () => openRoom(b.dataset.room));
+  $("#alloff").onclick = async () => { buzz(); await post("api/alloff").catch(() => {}); toast(t("allLightsOff")); setTimeout(refreshLive, 800); };
+  $("#homePhotoBtn").onclick = () => pickPhoto("home", "main", loadHome);
+  bindLive();
 }
 
 // ---------- live status ----------
-let LIVE = null, showAllLights = false, dragging = false, es_ = null, pollT = null;
 function liveHTML(L) {
   const sum = [];
   if (L.lights.length) sum.push(t("nL")(L.lights.length));
   if (L.audio.length) sum.push(t("nA")(L.audio.length));
   if (L.video.length) sum.push(t("nV")(L.video.length));
   const c = L.climate[0];
-  if (c && c.mode !== "off") sum.push(`${(t("hvac")[c.mode] || c.mode).toLowerCase()} ${t("to")} ${Math.round(c.target)}°`);
-  const where = (x) => [x.room, x.name !== x.room ? null : null].filter(Boolean)[0] || "";
-  const offBtn = (x, label) => `<button class="mini" data-off="${esc(x.id)}">${label || t("off")}</button>`;
-  let h = `<p class="sum">${sum.length ? sum.join(", ") : t("nothingOn")}</p>`;
-  if (L.lights.length) {
-    const list = showAllLights ? L.lights : L.lights.slice(0, 6);
-    h += `<p class="cat">${t("catL")}</p>` + list.map(x => `<div class="lrow" data-row="${esc(x.id)}"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")}</div></div>${x.level != null ? `<span class="lv">${x.level}%</span>` : ""}${offBtn(x)}</div>${x.level != null ? `<input type="range" min="1" max="100" value="${x.level}" data-level="${esc(x.id)}" aria-label="${esc(x.name)}">` : ""}</div>`).join("");
-    if (L.lights.length > 6 && !showAllLights) h += `<button class="more" id="moreLights">${t("seeAllN")(L.lights.length)}</button>`;
-  }
-  if (L.audio.length) h += `<p class="cat">${t("catA")}</p>` + L.audio.map(x => `<div class="lrow" data-row="${esc(x.id)}"><div class="top"><div><div class="nm">${esc(x.room || x.name)}</div><div class="sub">${esc([x.title, x.artist].filter(Boolean).join(", ") || x.source)}${x.state === "paused" ? " · " + t("pausedS") : ""}${x.muted ? " · " + t("muted") : ""}</div></div>${x.volume != null ? `<span class="lv">${x.volume}%</span>` : ""}${x.state === "playing" ? offBtn(x, t("pause")) : ""}</div>${x.volume != null ? `<input type="range" min="0" max="100" value="${x.volume}" data-level="${esc(x.id)}" aria-label="${esc(x.name)}">` : ""}</div>`).join("");
-  if (L.video.length) h += `<p class="cat">${t("catV")}</p>` + L.video.map(x => `<div class="lrow"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc([x.source, x.title].filter(Boolean).join(", ") || x.state)}</div></div>${offBtn(x)}</div></div>`).join("");
-  if (L.climate.length) h += `<p class="cat">${t("catC")}</p>` + L.climate.map(x => `<div class="lrow"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc(t("hvac")[x.mode] || x.mode)}${x.target != null && x.mode !== "off" ? ` ${t("to")} ${Math.round(x.target)}°` : ""}</div></div>${x.current != null ? `<span class="lv">${Math.round(x.current)}°</span>` : ""}</div></div>`).join("");
-  if (L.shades.length) h += `<p class="cat">${t("catS")}</p>` + L.shades.map(x => `<div class="lrow"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")} ${x.position != null ? x.position + "%" : ""}</div></div>${offBtn(x)}</div></div>`).join("");
-  if (L.other.length) h += `<p class="cat">${t("catO")}</p>` + L.other.map(x => `<div class="lrow"><div class="top"><div><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")}</div></div>${offBtn(x)}</div></div>`).join("");
-  return h;
+  if (c && c.mode !== "off" && c.target != null) sum.push(`${(t("hvac")[c.mode] || c.mode).toLowerCase()} ${t("to")} ${Math.round(c.target)}°`);
+  const rows = [];
+  L.audio.forEach(x => rows.push(`<div class="lrow"><span class="ic warm">${ic("music")}</span><div class="tx"><div class="nm">${esc(x.room || x.name)}</div><div class="sub">${esc([x.title, x.artist].filter(Boolean).join(", ") || x.source)}</div></div>${x.volume != null ? `<span class="val">${x.volume}%</span>` : ""}${x.state === "playing" ? `<button class="pillbtn" data-act="pause" data-id="${esc(x.id)}">${t("pause")}</button>` : `<button class="pillbtn" data-act="play" data-id="${esc(x.id)}">${t("play")}</button>`}</div>`));
+  L.video.forEach(x => rows.push(`<div class="lrow"><span class="ic warm">${ic("tv")}</span><div class="tx"><div class="nm">${esc(x.name)}</div><div class="sub">${esc([x.source, x.title].filter(Boolean).join(", ") || x.room || "")}</div></div><button class="pillbtn" data-act="off" data-id="${esc(x.id)}">${t("off")}</button></div>`));
+  L.lights.forEach(x => rows.push(`<div class="lrow"><span class="ic warm">${ic("light")}</span><div class="tx"><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")}</div></div>${x.level != null ? `<span class="val">${x.level}%</span>` : ""}<button class="pillbtn" data-act="off" data-id="${esc(x.id)}">${t("off")}</button></div>`));
+  L.shades.forEach(x => rows.push(`<div class="lrow"><span class="ic">${ic("shade")}</span><div class="tx"><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")}</div></div>${x.position != null ? `<span class="val">${x.position}%</span>` : ""}<button class="pillbtn" data-act="close" data-id="${esc(x.id)}">${t("closeS")}</button></div>`));
+  L.climate.forEach(x => rows.push(`<div class="lrow"><span class="ic">${ic("climate")}</span><div class="tx"><div class="nm">${esc(x.name)}</div><div class="sub">${esc(t("hvac")[x.mode] || x.mode)}${x.target != null && x.mode !== "off" ? ` ${t("to")} ${Math.round(x.target)}°` : ""}</div></div>${x.current != null ? `<span class="val">${Math.round(x.current)}°</span>` : ""}</div>`));
+  L.other.forEach(x => rows.push(`<div class="lrow"><span class="ic warm">${ic("switch")}</span><div class="tx"><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.room || "")}</div></div><button class="pillbtn" data-act="off" data-id="${esc(x.id)}">${t("off")}</button></div>`));
+  const shown = liveExpanded ? rows : rows.slice(0, 4);
+  return `<div class="livesum"><span class="dot on" id="liveDot"></span><span><b>${t("now")}</b> · ${sum.length ? sum.join(", ") : t("nothingOn")}</span></div>
+    ${shown.join("")}${rows.length > 4 ? `<button class="more" id="liveMore">${liveExpanded ? t("less") : `${t("seeAll")} (${rows.length})`}</button>` : ""}`;
+}
+function bindLive() {
+  document.querySelectorAll("#live [data-act]").forEach(b => b.onclick = async () => { buzz(); b.disabled = true; b.textContent = "…"; await post("api/set", { entity_id: b.dataset.id, action: b.dataset.act }).catch(() => toast(t("offline"))); refreshLive(); });
+  const m = $("#liveMore"); if (m) m.onclick = () => { liveExpanded = !liveExpanded; renderLive(LIVE); };
 }
 function renderLive(L) {
   LIVE = L;
-  if (dragging) return;
-  const box = $("#live"); if (!box) return;
-  box.innerHTML = liveHTML(L); bindLive();
-  const d = $("#liveDot"); if (d) d.classList.add("on");
-  // keep the security sentence and room switches in step
+  const box = $("#live"); if (box) { box.innerHTML = liveHTML(L); bindLive(); }
   if (HOME && L.security) {
     const s = HOME.status; s.openings = L.security.open.map(x => x.name); s.locks = L.security.locks; if (L.security.alarm) s.alarm = L.security.alarm;
+    const sl = $("#statusLine"); if (sl) sl.innerHTML = statusLine();
   }
-}
-const openRows = new Set();
-function bindLive() {
-  document.querySelectorAll(".lrow[data-row]").forEach(r => { if (openRows.has(r.dataset.row)) r.classList.add("open"); r.querySelector(".top").onclick = (e) => { if (e.target.closest("button")) return; r.classList.toggle("open"); r.classList.contains("open") ? openRows.add(r.dataset.row) : openRows.delete(r.dataset.row); }; });
-  document.querySelectorAll("[data-off]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "…"; await api("api/off", { method: "POST", body: JSON.stringify({ entity_id: b.dataset.off }) }).catch(() => toast(t("offline"))); refreshLive(); });
-  document.querySelectorAll("input[data-level]").forEach(r => {
-    r.addEventListener("pointerdown", () => dragging = true); r.addEventListener("touchstart", () => dragging = true, { passive: true });
-    r.onchange = async () => { const lv = r.closest(".lrow").querySelector(".lv"); if (lv) lv.textContent = r.value + "%"; await api("api/level", { method: "POST", body: JSON.stringify({ entity_id: r.dataset.level, value: +r.value }) }).catch(() => {}); dragging = false; refreshLive(); };
-    r.oninput = () => { const lv = r.closest(".lrow").querySelector(".lv"); if (lv) lv.textContent = r.value + "%"; };
-    r.addEventListener("pointerup", () => setTimeout(() => dragging = false, 300));
-  });
-  const m = $("#moreLights"); if (m) m.onclick = () => { showAllLights = true; renderLive(LIVE); };
+  if (L.activeScenes) document.querySelectorAll(".scene[data-id]").forEach(c => c.classList.toggle("active", L.activeScenes.includes(c.dataset.id)));
+  if (L.rooms && $("#rooms") && !$("#sheet").classList.contains("on")) { $("#rooms").innerHTML = roomsHTML(L.rooms); document.querySelectorAll(".room[data-room]").forEach(b => b.onclick = () => openRoom(b.dataset.room)); }
+  if (ROOM_OPEN && $("#sheet").classList.contains("on") && !SLIDING) loadRoom(ROOM_OPEN, true);
 }
 async function refreshLive() { try { renderLive(await api("api/live")); } catch {} }
+let es_ = null, pollT = null;
 function startLive() {
   refreshLive();
   if (window.EventSource && !es_) {
-    try {
-      es_ = new EventSource("api/stream");
-      es_.onmessage = (e) => { try { renderLive(JSON.parse(e.data)); } catch {} };
-      es_.onerror = () => { const d = $("#liveDot"); if (d) d.classList.remove("on"); };
-    } catch {}
+    try { es_ = new EventSource("api/stream"); es_.onmessage = (e) => { try { renderLive(JSON.parse(e.data)); } catch {} }; es_.onerror = () => { const d = $("#liveDot"); if (d) d.classList.remove("on"); }; } catch {}
   }
-  // safety net if the stream is blocked: poll every 5 s while the home tab is visible
   clearInterval(pollT);
-  pollT = setInterval(() => { if (!document.hidden && $("#home").classList.contains("on")) refreshLive(); }, 5000);
+  pollT = setInterval(() => { if (!document.hidden && $("#home").classList.contains("on")) refreshLive(); }, 6000);
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshLive(); });
 
-// ---------- suggestions sheet ----------
-async function suggest() {
-  const sheet = $("#sheet"), panel = $("#panel");
-  panel.innerHTML = `<h3>${t("sugTitle")}</h3><p class="empty">${t("suggesting")}</p>`;
-  sheet.classList.add("on");
-  let list = []; try { list = await api("api/suggest"); } catch {}
-  panel.innerHTML = `<h3>${t("sugTitle")}</h3>` + (Array.isArray(list) && list.length ? list.map((s, i) => `<div class="sug"><div><div class="n">${esc(s.name)}</div><div class="s">${esc(s.summary || "")}</div></div><button class="mini" data-i="${i}">${t("add")}</button></div>`).join("") : `<p class="empty">${t("offline")}</p>`) + `<button class="close" id="closeSheet">${t("close")}</button>`;
-  panel.querySelectorAll("[data-i]").forEach(b => b.onclick = async () => {
-    const s = list[+b.dataset.i]; b.disabled = true;
-    await api("api/scenes", { method: "POST", body: JSON.stringify({ name: s.name, actions: s.actions }) });
-    b.textContent = t("added");
-  });
-  $("#closeSheet").onclick = () => { sheet.classList.remove("on"); loadHome(); };
+// ---------- sheets ----------
+let ROOM_OPEN = null, SLIDING = false;
+function openSheet(html) { $("#panel").innerHTML = `<div class="grab"></div>` + html; $("#sheet").classList.add("on"); $("#panel").scrollTop = 0; }
+function closeSheet() { $("#sheet").classList.remove("on"); ROOM_OPEN = null; }
+$("#sheet").onclick = (e) => { if (e.target.id === "sheet") { closeSheet(); loadHome(); } };
+const closeBtn = () => `<button class="iconbtn x" id="xBtn" aria-label="${t("close")}">${ic("close")}</button>`;
+function bindClose(after) { const x = $("#xBtn"); if (x) x.onclick = () => { closeSheet(); (after || loadHome)(); }; }
+
+// scene detail: every action, grouped by room
+async function openScene(id) {
+  let d; try { d = await api(`api/scene/${encodeURIComponent(id)}`); } catch { toast(t("offline")); return; }
+  const byRoom = new Map();
+  for (const l of d.lines) { const k = l.room || "—"; if (!byRoom.has(k)) byRoom.set(k, []); byRoom.get(k).push(l); }
+  const groups = [...byRoom.entries()].map(([room, ls]) => `<p class="group">${esc(room)}</p>` + ls.map(l => `<div class="lrow"><span class="ic${/^(light|music|speaker|tv)$/.test(l.kind) && !/apag|off/.test(l.setting) ? " warm" : ""}">${ic(l.kind === "music" ? "music" : l.kind)}</span><div class="tx"><div class="nm">${esc(l.name)}</div></div><span class="val">${esc(l.setting)}</span></div>`).join("")).join("");
+  const moods = ["morning", "movie", "dinner", "relax", "away", "night", "party", "focus", "default"];
+  openSheet(`
+    <div class="shead"><div class="bg ${d.photo ? "" : "m-" + esc(d.mood)}" ${bgStyle(d.photo)}></div>${closeBtn()}
+      <h3>${esc(d.name)}</h3><p>${esc(d.parts.map(p => p.text).join(" · "))}</p></div>
+    <div class="sbody">
+      <button class="btn primary" id="runScene" style="width:100%">${ic("scene")} ${t("run")}</button>
+      <p class="group">${t("whatDoes")}</p>
+      <div class="glass" style="padding:0 14px">${groups || `<p class="quiet">—</p>`}</div>
+      <p class="group">${t("mood")}</p>
+      <div class="moods">${moods.map(m => `<button class="m-${m}" data-mood="${m}" aria-pressed="${m === d.mood && !d.photo}" aria-label="${m}"></button>`).join("")}</div>
+      <div class="row2"><button class="btn" id="scPhoto">${ic("image")} ${t("photo")}</button><button class="btn" id="scRename">${ic("edit")} ${t("rename")}</button></div>
+      ${d.photo ? `<div class="row2"><button class="btn" id="scNoPhoto">${t("removePhoto")}</button></div>` : ""}
+      <div class="row2"><button class="btn danger" id="scDel">${ic("trash")} ${t("del")}</button></div>
+    </div>`);
+  bindClose();
+  $("#runScene").onclick = async () => { buzz(); const r = await post(`api/scene/${encodeURIComponent(id)}`).catch(() => ({})); toast(r.ok ? t("sceneDone")(d.name) : t("sceneFail")(d.name)); closeSheet(); if (r.confirmations?.length) { show("talk"); r.confirmations.forEach(confirmCard); } else loadHome(); };
+  document.querySelectorAll("[data-mood]").forEach(b => b.onclick = async () => { await post(`api/scene/${encodeURIComponent(id)}`, { mood: b.dataset.mood }, "PATCH"); if (d.photo) await post("api/photo", { kind: "scene", id }, "DELETE"); openScene(id); });
+  $("#scPhoto").onclick = () => pickPhoto("scene", id, () => openScene(id));
+  const np = $("#scNoPhoto"); if (np) np.onclick = async () => { await post("api/photo", { kind: "scene", id }, "DELETE"); openScene(id); };
+  $("#scRename").onclick = async () => { const n = prompt(t("sceneName"), d.name); if (n && n.trim()) { await post(`api/scene/${encodeURIComponent(id)}`, { name: n.trim() }, "PATCH"); openScene(id); } };
+  $("#scDel").onclick = async () => { if (confirm(t("delQ")(d.name))) { await api(`api/scene/${encodeURIComponent(id)}`, { method: "DELETE" }); closeSheet(); loadHome(); } };
 }
-$("#sheet").onclick = (e) => { if (e.target.id === "sheet") { $("#sheet").classList.remove("on"); loadHome(); } };
+function newSceneSheet() {
+  openSheet(`<p class="sh3">${t("newScene")}</p><div class="sbody">
+    <button class="choice" id="chCap"><span class="ic">${ic("capture")}</span><span><b>${t("capture")}</b><small>${t("captureSub")}</small></span></button>
+    <button class="choice" id="chSug"><span class="ic">${ic("sparkle")}</span><span><b>${t("suggest")}</b><small>${t("suggestSub")}</small></span></button>
+    <div class="row2"><button class="btn" id="chClose">${t("close")}</button></div></div>`);
+  $("#chClose").onclick = () => { closeSheet(); };
+  $("#chSug").onclick = suggest;
+  $("#chCap").onclick = () => {
+    openSheet(`<p class="sh3">${t("capture")}</p><div class="sbody"><p style="color:var(--mute)">${t("captureSub")}</p>
+      <input class="field" id="capName" placeholder="${t("sceneName")}" maxlength="40">
+      <div class="row2"><button class="btn" id="capCancel">${t("cancel")}</button><button class="btn primary" id="capSave">${t("save")}</button></div></div>`);
+    setTimeout(() => $("#capName").focus(), 150);
+    $("#capCancel").onclick = closeSheet;
+    $("#capSave").onclick = async () => { const n = $("#capName").value.trim(); if (!n) return $("#capName").focus(); const r = await post("api/capture", { name: n }).catch(() => ({})); closeSheet(); toast(r.ok ? t("saved") : t("offline")); loadHome(); };
+  };
+}
+async function suggest() {
+  openSheet(`<p class="sh3">${t("suggest")}</p><div class="sbody"><p class="quiet">${t("suggesting")}</p></div>`);
+  let list = []; try { list = await api("api/suggest"); } catch {}
+  const moodOf = (n) => { const s = n.toLowerCase(); return /mañana|manana|morning|día|dia/.test(s) ? "morning" : /cine|movie|pel/.test(s) ? "movie" : /cena|dinner|comida/.test(s) ? "dinner" : /relax|tranq/.test(s) ? "relax" : /sal|away|voy/.test(s) ? "away" : /noche|night|dorm/.test(s) ? "night" : /fiesta|party/.test(s) ? "party" : "default"; };
+  $("#panel").innerHTML = `<div class="grab"></div><p class="sh3">${t("suggest")}</p><div class="sbody">` + (Array.isArray(list) && list.length ? list.map((s, i) => `<div class="sug"><span class="sw m-${moodOf(s.name)}"></span><div class="tx"><b>${esc(s.name)}</b><small>${esc(s.summary || "")}</small></div><button class="pillbtn" data-i="${i}">${t("add")}</button></div>`).join("") : `<p class="quiet">${t("offline")}</p>`) + `<div class="row2"><button class="btn" id="sgClose">${t("close")}</button></div></div>`;
+  document.querySelectorAll("[data-i]").forEach(b => b.onclick = async () => { const s = list[+b.dataset.i]; b.disabled = true; await post("api/scenes", { name: s.name, actions: s.actions }); b.textContent = t("added"); });
+  $("#sgClose").onclick = () => { closeSheet(); loadHome(); };
+}
+
+// room control sheet
+async function openRoom(room) { ROOM_OPEN = room; await loadRoom(room, false); }
+async function loadRoom(room, quiet) {
+  let r; try { r = await api(`api/rooms/${encodeURIComponent(room)}`); } catch { if (!quiet) toast(t("offline")); return; }
+  if (ROOM_OPEN !== room) return;
+  const lightsOn = r.devices.filter(d => d.kind === "light" && d.on).length, lights = r.devices.filter(d => d.kind === "light").length;
+  const body = r.devices.map(devHTML).join("") || `<p class="quiet">${t("noDevices")}</p>`;
+  const scroll = $("#panel").scrollTop;
+  const html = `<div class="shead"><div class="bg ${r.photo ? "" : lightsOn ? "r-on" : "r-off"}" ${bgStyle(r.photo)}></div>${closeBtn()}
+      <h3>${esc(room)}</h3><p>${lights ? (lightsOn ? t("lightsOn")(lightsOn, lights) : t("allLightsOff")) : ""}</p></div>
+    <div class="sbody">
+      ${lightsOn ? `<div class="row2" style="margin-top:4px"><button class="btn" id="roomOff">${ic("power")} ${t("allLightsOff")}</button></div>` : ""}
+      <div class="glass" style="padding:0 14px;margin-top:14px">${body}</div>
+      <div class="row2"><button class="btn" id="roomPhoto">${ic("image")} ${t("roomPhoto")}</button></div>
+    </div>`;
+  if (quiet && $("#sheet").classList.contains("on")) { $("#panel").innerHTML = `<div class="grab"></div>` + html; $("#panel").scrollTop = scroll; }
+  else openSheet(html);
+  bindClose();
+  const ro = $("#roomOff"); if (ro) ro.onclick = async () => { buzz(); await post("api/room", { room, on: false }); setTimeout(() => loadRoom(room, true), 600); };
+  $("#roomPhoto").onclick = () => pickPhoto("room", room, () => loadRoom(room, true));
+  bindDevices(room);
+}
+function devHTML(d) {
+  const top = (icon, warm, sub, right = "") => `<div class="top"><span class="ic${warm ? " warm" : ""}">${ic(icon)}</span><div class="tx"><div class="nm">${esc(d.name)}</div>${sub ? `<div class="sub">${esc(sub)}</div>` : ""}</div>${right}</div>`;
+  const tog = (on) => `<button class="toggle" role="switch" aria-checked="${on}" data-toggle="${esc(d.id)}" aria-label="${esc(d.name)}"></button>`;
+  const slider = (val, act, cls = "") => `<div class="slider ${cls}" data-slider="${esc(d.id)}" data-act="${act}" data-val="${val}"><div class="fill" style="width:${val}%"></div><div class="lab"><span></span><span class="v">${val}%</span></div></div>`;
+  if (d.kind === "light") return `<div class="dev">${top("light", d.on, d.on ? (d.dimmable ? d.level + "%" : t("on")) : t("off"), tog(d.on))}${d.dimmable ? slider(d.on ? d.level : 0, "level") : ""}</div>`;
+  if (d.kind === "switch" || d.kind === "fan") return `<div class="dev">${top(d.kind === "fan" ? "fan" : "switch", d.on, "", tog(d.on))}</div>`;
+  if (d.kind === "shade") return `<div class="dev">${top("shade", false, d.position + "%")}${slider(d.position, "position", "cool")}<div class="seg"><button data-cover="open" data-id="${esc(d.id)}">${t("openS")}</button><button data-cover="stop" data-id="${esc(d.id)}">${t("stop")}</button><button data-cover="close" data-id="${esc(d.id)}">${t("closeS")}</button></div></div>`;
+  if (d.kind === "climate") return `<div class="dev">${top("climate", false, `${t("hvac")[d.mode] || d.mode}${d.current != null ? ` · ${Math.round(d.current)}° ${t("inside")}` : ""}`)}<div class="thermo"><button data-temp="-1" data-id="${esc(d.id)}" data-target="${d.target}">−</button><span class="big">${d.target != null ? Math.round(d.target) + "°" : "—"}</span><button data-temp="1" data-id="${esc(d.id)}" data-target="${d.target}">+</button></div></div>`;
+  if (d.kind === "speaker") return `<div class="dev">${top("speaker", d.playing, d.playing ? [d.title, d.artist].filter(Boolean).join(", ") : (d.title ? d.title : ""))}
+    <div class="np">${d.art ? `<img src="${esc(d.art)}" alt="">` : ""}<div class="ctl"><button data-media="${d.playing ? "pause" : "play"}" data-id="${esc(d.id)}" aria-label="play">${ic(d.playing ? "pause" : "play")}</button><button data-media="next" data-id="${esc(d.id)}" aria-label="next">${ic("next")}</button></div></div>
+    ${d.volume != null ? slider(d.volume, "volume") : ""}</div>`;
+  if (d.kind === "tv") return `<div class="dev">${top("tv", d.on, d.on ? d.source || t("on") : t("off"), tog(d.on))}${d.on && d.sources?.length ? `<div class="chips">${d.sources.map(s => `<button data-source="${esc(s)}" data-id="${esc(d.id)}" aria-pressed="${s === d.source}">${esc(s)}</button>`).join("")}</div>` : ""}${d.on && d.volume != null ? slider(d.volume, "volume") : ""}</div>`;
+  if (d.kind === "contact") return `<div class="dev">${top("door", d.open, d.open ? t("openState") : t("closedState"))}</div>`;
+  if (d.kind === "lock") return `<div class="dev">${top("lock", false, d.state === "locked" ? t("locked") : t("unlockedS"))}</div>`;
+  if (d.kind === "camera") return `<div class="dev">${top("camera", false, "")}</div>`;
+  return "";
+}
+function bindDevices(room) {
+  const again = () => setTimeout(() => loadRoom(room, true), 700);
+  document.querySelectorAll("[data-toggle]").forEach(b => b.onclick = async () => { buzz(); const on = b.getAttribute("aria-checked") !== "true"; b.setAttribute("aria-checked", on); await post("api/set", { entity_id: b.dataset.toggle, action: on ? "on" : "off" }).catch(() => {}); again(); });
+  document.querySelectorAll("[data-cover]").forEach(b => b.onclick = async () => { buzz(); await post("api/set", { entity_id: b.dataset.id, action: b.dataset.cover }); again(); });
+  document.querySelectorAll("[data-temp]").forEach(b => b.onclick = async () => { buzz(); const v = Math.round(+b.dataset.target + +b.dataset.temp); b.parentElement.querySelector(".big").textContent = v + "°"; document.querySelectorAll(`[data-temp][data-id="${b.dataset.id}"]`).forEach(x => x.dataset.target = v); await post("api/set", { entity_id: b.dataset.id, action: "temp", value: v }); });
+  document.querySelectorAll("[data-media]").forEach(b => b.onclick = async () => { buzz(); await post("api/set", { entity_id: b.dataset.id, action: b.dataset.media }); again(); });
+  document.querySelectorAll("[data-source]").forEach(b => b.onclick = async () => { buzz(); await post("api/set", { entity_id: b.dataset.id, action: "source", value: b.dataset.source }); again(); });
+  document.querySelectorAll("[data-slider]").forEach(el => {
+    const set = (clientX) => { const r = el.getBoundingClientRect(); const v = Math.max(0, Math.min(100, Math.round((clientX - r.left) / r.width * 100))); el.dataset.val = v; el.querySelector(".fill").style.width = v + "%"; el.querySelector(".v").textContent = v + "%"; return v; };
+    el.addEventListener("pointerdown", (e) => { SLIDING = true; el.setPointerCapture(e.pointerId); set(e.clientX); });
+    el.addEventListener("pointermove", (e) => { if (SLIDING && el.hasPointerCapture(e.pointerId)) set(e.clientX); });
+    el.addEventListener("pointerup", async (e) => { const v = set(e.clientX); SLIDING = false; buzz(); await post("api/set", { entity_id: el.dataset.slider, action: el.dataset.act, value: v }).catch(() => {}); again(); });
+    el.addEventListener("pointercancel", () => { SLIDING = false; });
+  });
+}
+
+// photos: resize on the phone, upload as JPEG
+function pickPhoto(kind, id, done) {
+  const inp = $("#filePick"); inp.value = "";
+  inp.onchange = () => {
+    const f = inp.files?.[0]; if (!f) return;
+    toast(t("upload"));
+    const img = new Image(); const url = URL.createObjectURL(f);
+    img.onload = async () => {
+      const max = 1400, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      const data = c.toDataURL("image/jpeg", .82);
+      const r = await post("api/photo", { kind, id, data }).catch(() => ({}));
+      toast(r.ok ? t("saved") : t("offline")); done?.();
+    };
+    img.src = url;
+  };
+  inp.click();
+}
 
 // ---------- talk ----------
 const log = $("#log");
@@ -342,12 +639,8 @@ function add(cls, text, images = [], persist = true) {
 function confirmCard(c) {
   const d = document.createElement("div"); d.className = "card";
   const what = c.kind === "service" ? `${c.service.replace(/_/g, " ")}: ${(c.entity_ids || []).map(e => e.split(".")[1].replace(/_/g, " ")).join(", ")}` : c.summary;
-  d.innerHTML = `<b>${c.kind === "service" ? t("confirm") : t("routine")}</b>${esc(what)}<div class="pair"><button type="button" class="no">${t("cancel")}</button><button type="button" class="yes">${t("ok")}</button></div>`;
-  const go = async (approve) => {
-    d.querySelectorAll("button").forEach(b => b.disabled = true);
-    const r = await api(`api/confirm/${c.id}`, { method: "POST", body: JSON.stringify({ approve }) }).catch(() => ({ error: t("offline") }));
-    d.remove(); add("bina", r.reply || r.error || "OK");
-  };
+  d.innerHTML = `<b>${c.kind === "service" ? t("confirm") : t("routine")}</b>${esc(what)}<div class="row2"><button type="button" class="btn no">${t("cancel")}</button><button type="button" class="btn primary yes">${t("ok")}</button></div>`;
+  const go = async (approve) => { d.querySelectorAll("button").forEach(b => b.disabled = true); const r = await post(`api/confirm/${c.id}`, { approve }).catch(() => ({ error: t("offline") })); d.remove(); add("bina", r.reply || r.error || "OK"); };
   d.querySelector(".yes").onclick = () => go(true);
   d.querySelector(".no").onclick = () => go(false);
   log.appendChild(d); $("main").scrollTop = $("main").scrollHeight;
@@ -356,13 +649,10 @@ async function send(text) {
   text = (text || "").trim(); if (!text) return;
   add("me", text); $("#in").value = "";
   const w = add("bina typing", "…", [], false);
-  try {
-    const r = await api("api/chat", { method: "POST", body: JSON.stringify({ text }) });
-    w.remove(); if (r.reply || r.images?.length) add("bina", r.reply || "", r.images || []); (r.confirmations || []).forEach(confirmCard);
-  } catch { w.textContent = t("offline"); w.classList.remove("typing"); }
+  try { const r = await post("api/chat", { text }); w.remove(); if (r.reply || r.images?.length) add("bina", r.reply || "", r.images || []); (r.confirmations || []).forEach(confirmCard); }
+  catch { w.textContent = t("offline"); w.classList.remove("typing"); }
 }
 $("#f").onsubmit = (e) => { e.preventDefault(); send($("#in").value); };
-
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const mic = $("#mic");
 if (!SR) mic.style.display = "none";
@@ -371,7 +661,7 @@ else {
   mic.onclick = () => {
     if (rec) { rec.stop(); return; }
     rec = new SR(); rec.lang = LANG === "es" ? "es-US" : LANG === "he" ? "he-IL" : "en-US"; rec.interimResults = false;
-    mic.classList.add("live");
+    mic.classList.add("live"); buzz();
     rec.onresult = (e) => send(e.results[0][0].transcript);
     rec.onend = rec.onerror = () => { mic.classList.remove("live"); rec = null; };
     rec.start();
@@ -381,20 +671,21 @@ else {
 // ---------- activity ----------
 async function loadActivity() {
   const [evs, feed, alerts] = await Promise.all([api("api/events").catch(() => []), api("api/feed").catch(() => []), api("api/alerts").catch(() => [])]);
-  const el = $("#activity");
-  el.innerHTML = `<p class="hello">${t("tAct")}</p>
-    <button class="alloff" id="briefBtn">${t("brief")}</button><div id="briefOut"></div>
-    ${alerts.length ? `<h2>${t("alerts")}</h2>` + alerts.slice(0, 10).map(a => `<div class="event"><div><div class="t">${when(a.t)}</div><div class="h">${esc(a.title)}</div><div class="d">${esc(a.message)}</div></div></div>`).join("") : ""}
-    <h2>${t("act")}</h2>${evs.length ? evs.map(eventRow).join("") : `<p class="empty">${t("noEvents")}</p>`}
-    <h2>${t("feed")}</h2>${feed.slice(0, 25).map(i => `<div class="event"><div><div class="t">${when(i.t)} · ${esc(i.who)}</div><div class="h">${esc(i.text)}</div><div class="d">${esc(plain(i.reply || ""))}</div></div></div>`).join("")}`;
-  $("#briefBtn").onclick = async () => { $("#briefBtn").textContent = t("writing"); const r = await api("api/brief").catch(() => ({ error: t("offline") })); $("#briefOut").innerHTML = `<div class="card">${esc(plain(r.brief || r.error))}</div>`; $("#briefBtn").textContent = t("brief"); };
+  $("#activity").innerHTML = `<p class="ttl">${t("tAct")}</p>
+    <button class="bigbtn" id="briefBtn" style="margin-top:0">${ic("sparkle")} ${t("brief")}</button><div id="briefOut" class="pad"></div>
+    ${alerts.length ? `<h2 class="sec">${t("alerts")}</h2><div class="glass list">` + alerts.slice(0, 10).map(a => `<div class="event"><div><div class="t">${when(a.t)}</div><div class="h">${esc(a.title)}</div><div class="d">${esc(a.message)}</div></div></div>`).join("") + `</div>` : ""}
+    <h2 class="sec">${t("act")}</h2><div class="glass list">${evs.length ? evs.map(eventRow).join("") : `<p class="empty">${t("noEvents")}</p>`}</div>
+    <h2 class="sec">${t("feed")}</h2><div class="glass list">${feed.slice(0, 25).map(i => `<div class="event"><div><div class="t">${when(i.t)} · ${esc(i.who)}</div><div class="h">${esc(i.text)}</div><div class="d">${esc(plain(i.reply || ""))}</div></div></div>`).join("") || `<p class="empty">${t("noEvents")}</p>`}</div>`;
+  $("#briefBtn").onclick = async () => { $("#briefBtn").innerHTML = t("writing"); const r = await api("api/brief").catch(() => ({ error: t("offline") })); $("#briefOut").innerHTML = `<div class="card">${esc(plain(r.brief || r.error))}</div>`; $("#briefBtn").innerHTML = `${ic("sparkle")} ${t("brief")}`; };
 }
 
 // ---------- boot ----------
 (async () => {
-  try { const me = await api("api/me"); LANG = me.language === "en" ? "en" : "es"; $("#houseName").textContent = me.house; } catch {}
+  try { const me = await api("api/me"); LANG = me.language === "en" ? "en" : "es"; } catch {}
   document.documentElement.lang = LANG;
   document.querySelectorAll("[data-t]").forEach(n => n.textContent = t(n.dataset.t));
+  document.querySelectorAll("[data-icon]").forEach(n => n.outerHTML = ic(n.dataset.icon));
+  $("#mic").innerHTML = ic("mic"); $("#sendBtn").innerHTML = ic("send");
   $("#in").placeholder = t("ph");
   if (hist.length) hist.forEach(m => add(m.cls, m.text, m.images || [], false));
   else { add("bina", t("hi"), [], false); const tip = document.createElement("p"); tip.className = "tips"; tip.textContent = t("tips"); log.appendChild(tip); }
@@ -402,7 +693,6 @@ async function loadActivity() {
   show(start === "talk" || start === "activity" ? start : "home");
   startLive();
 })();
-setInterval(() => { if (!document.hidden && $("#home").classList.contains("on") && !$("#sheet").classList.contains("on")) loadHome(); }, 20000);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>

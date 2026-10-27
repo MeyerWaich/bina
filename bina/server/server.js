@@ -9,7 +9,7 @@ import { tools } from "./tools.js";
 import { classify, roleAllows } from "./policy.js";
 import { icons } from "./icons.js";
 
-const VERSION = "0.5.0";
+const VERSION = "0.5.1";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOUSE_PATH = process.env.BINA_HOUSE || "./house.json";
 const MODEL = process.env.BINA_MODEL || "claude-sonnet-4-6";
@@ -37,7 +37,7 @@ const house = JSON.parse(fs.readFileSync(HOUSE_PATH, "utf8"));
 house.memory ||= []; house.preferences ||= []; house.protected ||= []; house.scenes ||= [];
 const saveHouse = () => fs.writeFileSync(HOUSE_PATH, JSON.stringify(house, null, 2));
 const FEED_PATH = path.join(DATA, "feed.json"), EVENTS_PATH = path.join(DATA, "events.json"), ALERTS_PATH = path.join(DATA, "alerts.json");
-let feed = readJson(FEED_PATH, []), events = readJson(EVENTS_PATH, []), alerts = readJson(ALERTS_PATH, []).filter(a => !/macbook|iphone|ipad|imac/i.test(a.message || ""));
+let feed = readJson(FEED_PATH, []), events = readJson(EVENTS_PATH, []), alerts = readJson(ALERTS_PATH, []).filter(a => !/macbook|iphone|ipad|imac|\b[A-Z0-9]{10,}\b/.test(a.message || ""));
 const pushFeed = (item) => { feed.unshift(item); feed = feed.slice(0, 200); fs.writeFile(FEED_PATH, JSON.stringify(feed), () => {}); };
 const pushEvent = (item) => { events.unshift(item); events = events.slice(0, 150); fs.writeFile(EVENTS_PATH, JSON.stringify(events), () => {}); };
 const pushAlert = (item) => { alerts.unshift(item); alerts = alerts.slice(0, 100); fs.writeFile(ALERTS_PATH, JSON.stringify(alerts), () => {}); };
@@ -122,6 +122,16 @@ function findScene(text) {
   return house.scenes.find(s => { const k = norm(s.name).replace(/^modo /, ""); return n === k || n === "modo " + k || (n.endsWith(k) && n.length <= k.length + 8); });
 }
 
+// ---------- temperature unit guard: never send Celsius numbers to a Fahrenheit house ----------
+let TEMP_UNIT = "°F";
+(async () => { try { const c = await fetch(process.env.HA_URL.replace(/\/$/, "") + "/api/config", { headers: { Authorization: `Bearer ${process.env.HA_TOKEN}` } }).then(r => r.json()); TEMP_UNIT = c?.unit_system?.temperature || "°F"; fixSceneTemps(); } catch {} })();
+const fixTemp = (v) => (TEMP_UNIT === "°F" && typeof v === "number" && v < 40) ? Math.round(v * 9 / 5 + 32) : v;
+function fixSceneTemps() {
+  let changed = false;
+  for (const sc of house.scenes) for (const a of sc.actions || []) if (a.domain === "climate" && a.data?.temperature != null) { const f = fixTemp(a.data.temperature); if (f !== a.data.temperature) { a.data.temperature = f; changed = true; } }
+  if (changed) { saveHouse(); console.log("fixed scene temperatures to", TEMP_UNIT); }
+}
+
 // ---------- scenes ----------
 async function runScene(scene, user) {
   const confirmations = []; const done = []; const failed = [];
@@ -132,7 +142,8 @@ async function runScene(scene, user) {
       const decision = classify({ domain: a.domain, service: a.service, entityIds: a.entity_ids || [], house, states: st });
       if (decision === "deny" || !roleAllows(user.role, decision)) { failed.push(a.domain); continue; }
       if (decision === "confirm") { const id = newId(); const call = { kind: "service", ...a }; pending.set(id, { userId: user.id, call }); confirmations.push({ id, ...call }); continue; }
-      await ha.call(a.domain, a.service, { entity_id: a.entity_ids, ...(a.data || {}) });
+      const data = { ...(a.data || {}) }; if (a.domain === "climate" && data.temperature != null) data.temperature = fixTemp(data.temperature);
+      await ha.call(a.domain, a.service, { entity_id: a.entity_ids, ...data });
       done.push(a.domain);
     } catch (e) { failed.push(`${a.domain}: ${e.message.slice(0, 80)}`); }
   }
@@ -205,7 +216,7 @@ async function runTool(name, input, user, ctx) {
     case "remember": house.memory.push(input.fact); saveHouse(); return "saved";
     case "save_scene": {
       const scene = { id: norm(input.name).replace(/\s+/g, "-") || newId(), name: input.name, mood: MOODS.includes(input.mood) ? input.mood : guessMood(input.name), actions: input.actions || [] };
-      house.scenes = house.scenes.filter(s => norm(s.name) !== norm(scene.name)); house.scenes.push(scene); saveHouse();
+      house.scenes = house.scenes.filter(s => norm(s.name) !== norm(scene.name)); house.scenes.push(scene); fixSceneTemps(); saveHouse();
       return { saved: true, note: "It is now a button on the home screen." };
     }
     case "run_scene": {
@@ -424,7 +435,7 @@ async function suggestScenes(user) {
   const tool = { name: "scenes", description: "Return the proposed scenes", input_schema: { type: "object", properties: { scenes: { type: "array", items: { type: "object", properties: { name: { type: "string" }, summary: { type: "string" }, actions: { type: "array", items: action } }, required: ["name", "summary", "actions"] } } }, required: ["scenes"] } };
   const r = await anthropic.messages.create({
     model: MODEL, max_tokens: 8000, tools: [tool], tool_choice: { type: "tool", name: "scenes" },
-    messages: [{ role: "user", content: `Devices (entity_id | name | room):\n${inv}\nRooms with speakers: ${rooms.join(", ") || "none"}\n\nPropose 6 useful scenes for this exact house, names and summaries in ${user.language === "es" ? "Spanish" : "English"} (morning, movie night, dinner, relax, leaving, good night or similar), skipping existing ones: ${house.scenes.map(s => s.name).join(", ") || "none"}. Group lights per scene into as few actions as possible (one light.turn_on action with several entity_ids and data.brightness_pct, one light.turn_off action). Shades: cover.open_cover / cover.close_cover. Climate: climate.set_temperature with data.temperature. Music: an action with only music {query, room, volume_pct} using a room with speakers. Never locks, alarm or cameras. Names: 1 or 2 words. Summary: one short line.` }]
+    messages: [{ role: "user", content: `Devices (entity_id | name | room):\n${inv}\nRooms with speakers: ${rooms.join(", ") || "none"}\n\nPropose 6 useful scenes for this exact house, names and summaries in ${user.language === "es" ? "Spanish" : "English"} (morning, movie night, dinner, relax, leaving, good night or similar), skipping existing ones: ${house.scenes.map(s => s.name).join(", ") || "none"}. Group lights per scene into as few actions as possible (one light.turn_on action with several entity_ids and data.brightness_pct, one light.turn_off action). Shades: cover.open_cover / cover.close_cover. Climate: climate.set_temperature with data.temperature in ${TEMP_UNIT} (this house uses ${TEMP_UNIT}, e.g. 72). Music: an action with only music {query, room, volume_pct} using a room with speakers. Never locks, alarm or cameras. Names: 1 or 2 words. Summary: one short line.` }]
   });
   const out = r.content.find(c => c.type === "tool_use")?.input?.scenes || [];
   const known = new Set(list.map(x => x.s.entity_id));
@@ -628,7 +639,7 @@ function cleanName(name, room) {
   n = n.replace(/\b(\w+)\s+\1\b/gi, "$1").trim();
   return n || name;
 }
-const isPersonal = (s) => /macbook|iphone|ipad|imac|android|pixel|galaxy|laptop/i.test(fname(s) + " " + s.entity_id);
+const isPersonal = (s) => /macbook|iphone|ipad|imac|android|pixel|galaxy|laptop/i.test(fname(s) + " " + s.entity_id) || /^[A-Z0-9]{10,}$/.test(String(fname(s)).trim());
 const isNoise = (s) => /keypad|_led\b| led\b|button|scene_controller/i.test(fname(s) + " " + s.entity_id);
 const isTV = (s) => s.attributes?.device_class === "tv" || /\b(tv|tele|television|samsung|lg|sony)\b/i.test(fname(s) + " " + s.entity_id);
 async function liveStatus() {
